@@ -126,10 +126,12 @@ bool System::command_publish(const char * value, const int8_t id) {
 bool System::command_syslog_level(const char * value, const int8_t id) {
     uint8_t s = 0xff;
     if (Helpers::value2enum(value, s, FL_(enum_syslog_level))) {
-        EMSESP::webSettingsService.update([&](WebSettings & settings) {
-            settings.syslog_level = (int8_t)s - 1;
-            return StateUpdateResult::CHANGED;
-        }, "local");
+        EMSESP::webSettingsService.update(
+            [&](WebSettings & settings) {
+                settings.syslog_level = (int8_t)s - 1;
+                return StateUpdateResult::CHANGED;
+            },
+            "local");
         EMSESP::system_.syslog_start();
         return true;
     }

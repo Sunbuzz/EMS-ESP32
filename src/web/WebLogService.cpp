@@ -58,10 +58,12 @@ uuid::log::Level WebLogService::log_level() const {
 }
 
 void WebLogService::log_level(uuid::log::Level level) {
-    EMSESP::webSettingsService.update([&](WebSettings & settings) {
-        settings.weblog_level = level;
-        return StateUpdateResult::CHANGED;
-     }, "local");
+    EMSESP::webSettingsService.update(
+        [&](WebSettings & settings) {
+            settings.weblog_level = level;
+            return StateUpdateResult::CHANGED;
+        },
+        "local");
     uuid::log::Logger::register_handler(this, level);
 }
 
@@ -74,10 +76,12 @@ void WebLogService::maximum_log_messages(size_t count) {
     while (log_messages_.size() > maximum_log_messages_) {
         log_messages_.pop_front();
     }
-    EMSESP::webSettingsService.update([&](WebSettings & settings) {
-        settings.weblog_buffer = count;
-        return StateUpdateResult::CHANGED;
-     }, "local");
+    EMSESP::webSettingsService.update(
+        [&](WebSettings & settings) {
+            settings.weblog_buffer = count;
+            return StateUpdateResult::CHANGED;
+        },
+        "local");
 }
 
 bool WebLogService::compact() {
@@ -86,10 +90,12 @@ bool WebLogService::compact() {
 
 void WebLogService::compact(bool compact) {
     compact_ = compact;
-    EMSESP::webSettingsService.update([&](WebSettings & settings) {
-        settings.weblog_compact = compact;
-        return StateUpdateResult::CHANGED;
-     }, "local");
+    EMSESP::webSettingsService.update(
+        [&](WebSettings & settings) {
+            settings.weblog_compact = compact;
+            return StateUpdateResult::CHANGED;
+        },
+        "local");
 }
 
 WebLogService::QueuedLogMessage::QueuedLogMessage(unsigned long id, std::shared_ptr<uuid::log::Message> && content)
@@ -113,7 +119,6 @@ void WebLogService::operator<<(std::shared_ptr<uuid::log::Message> message) {
             if (time_offset_ < offset - 1 || time_offset_ > offset + 1) {
                 time_offset_ = offset;
             }
-
         }
     });
 }
@@ -151,7 +156,7 @@ char * WebLogService::messagetime(char * out, const uint64_t t) {
     } else {
         time_t t1 = time_offset_ + t / 1000ULL;
         strftime(out, 25, "%F %T", localtime(&t1));
-        snprintf_P(out, 25, "%s.%03d", out, (uint16_t)(t % 1000));
+        snprintf(out, 25, "%s.%03d", out, (uint16_t)(t % 1000));
     }
     return out;
 }

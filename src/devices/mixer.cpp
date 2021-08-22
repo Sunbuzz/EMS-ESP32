@@ -86,24 +86,24 @@ bool Mixer::publish_ha_config() {
     StaticJsonDocument<EMSESP_JSON_SIZE_HA_CONFIG> doc;
 
     char uniq_id[20];
-    snprintf_P(uniq_id, sizeof(uniq_id), PSTR("Mixer%02X"), device_id() - 0x20 + 1);
+    snprintf(uniq_id, sizeof(uniq_id), "Mixer%02X", device_id() - 0x20 + 1);
     doc["uniq_id"] = uniq_id;
 
     doc["ic"] = F_(icondevice);
 
     char stat_t[Mqtt::MQTT_TOPIC_MAX_SIZE];
-    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/%s"), Mqtt::base().c_str(), Mqtt::tag_to_topic(device_type(), DeviceValueTAG::TAG_NONE).c_str());
+    snprintf(stat_t, sizeof(stat_t), "%s/%s", Mqtt::base().c_str(), Mqtt::tag_to_topic(device_type(), DeviceValueTAG::TAG_NONE).c_str());
     doc["stat_t"] = stat_t;
 
     char name[20];
-    snprintf_P(name, sizeof(name), PSTR("Mixer %02X"), device_id() - 0x20 + 1);
+    snprintf(name, sizeof(name), "Mixer %02X", device_id() - 0x20 + 1);
     doc["name"] = name;
 
     char tpl[30];
     if (type_ == Type::HC) {
-        snprintf_P(tpl, sizeof(tpl), PSTR("{{value_json.hc%d.id}}"), device_id() - 0x20 + 1);
+        snprintf(tpl, sizeof(tpl), "{{value_json.hc%d.id}}", device_id() - 0x20 + 1);
     } else {
-        snprintf_P(tpl, sizeof(tpl), PSTR("{{value_json.wwc%d.id}}"), device_id() - 0x28 + 1);
+        snprintf(tpl, sizeof(tpl), "{{value_json.wwc%d.id}}", device_id() - 0x28 + 1);
     }
     doc["val_tpl"] = tpl;
 
@@ -118,9 +118,9 @@ bool Mixer::publish_ha_config() {
     // determine the topic, if its HC and WWC. This is determined by the incoming telegram types.
     std::string topic(Mqtt::MQTT_TOPIC_MAX_SIZE, '\0');
     if (type_ == Type::HC) {
-        snprintf_P(&topic[0], topic.capacity() + 1, PSTR("sensor/%s/mixer_hc%d/config"), Mqtt::base().c_str(), hc_);
+        snprintf(&topic[0], topic.capacity() + 1, "sensor/%s/mixer_hc%d/config", Mqtt::base().c_str(), hc_);
     } else {
-        snprintf_P(&topic[0], topic.capacity() + 1, PSTR("sensor/%s/mixer_wwc%d/config"), Mqtt::base().c_str(), hc_); // WWC
+        snprintf(&topic[0], topic.capacity() + 1, "sensor/%s/mixer_wwc%d/config", Mqtt::base().c_str(), hc_); // WWC
     }
 
     Mqtt::publish_ha(topic, doc.as<JsonObject>()); // publish the config payload with retain flag

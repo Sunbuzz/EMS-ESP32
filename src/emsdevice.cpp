@@ -226,31 +226,31 @@ uint8_t EMSdevice::device_name_2_device_type(const char * topic) {
         *p = tolower(*p);
     }
 
-    if (!strcmp_P(lowtopic, reinterpret_cast<PGM_P>(F_(boiler)))) {
+    if (!strcmp(lowtopic, reinterpret_cast<PGM_P>(F_(boiler)))) {
         return DeviceType::BOILER;
     }
 
-    if (!strcmp_P(lowtopic, reinterpret_cast<PGM_P>(F_(thermostat)))) {
+    if (!strcmp(lowtopic, reinterpret_cast<PGM_P>(F_(thermostat)))) {
         return DeviceType::THERMOSTAT;
     }
 
-    if (!strcmp_P(lowtopic, reinterpret_cast<PGM_P>(F_(system)))) {
+    if (!strcmp(lowtopic, reinterpret_cast<PGM_P>(F_(system)))) {
         return DeviceType::SYSTEM;
     }
 
-    if (!strcmp_P(lowtopic, reinterpret_cast<PGM_P>(F_(heatpump)))) {
+    if (!strcmp(lowtopic, reinterpret_cast<PGM_P>(F_(heatpump)))) {
         return DeviceType::HEATPUMP;
     }
 
-    if (!strcmp_P(lowtopic, reinterpret_cast<PGM_P>(F_(solar)))) {
+    if (!strcmp(lowtopic, reinterpret_cast<PGM_P>(F_(solar)))) {
         return DeviceType::SOLAR;
     }
 
-    if (!strcmp_P(lowtopic, reinterpret_cast<PGM_P>(F_(mixer)))) {
+    if (!strcmp(lowtopic, reinterpret_cast<PGM_P>(F_(mixer)))) {
         return DeviceType::MIXER;
     }
 
-    if (!strcmp_P(lowtopic, reinterpret_cast<PGM_P>(F_(dallassensor)))) {
+    if (!strcmp(lowtopic, reinterpret_cast<PGM_P>(F_(dallassensor)))) {
         return DeviceType::DALLASSENSOR;
     }
 
@@ -298,21 +298,21 @@ std::string EMSdevice::to_string() const {
 
     // for devices that haven't been lookup yet, don't show all details
     if (product_id_ == 0) {
-        snprintf_P(&str[0], str.capacity() + 1, PSTR("%s (DeviceID:0x%02X)"), name_.c_str(), device_id_);
+        snprintf(&str[0], str.capacity() + 1, "%s (DeviceID:0x%02X)", name_.c_str(), device_id_);
         return str;
     }
 
     if (brand_ == Brand::NO_BRAND) {
-        snprintf_P(&str[0], str.capacity() + 1, PSTR("%s (DeviceID:0x%02X, ProductID:%d, Version:%s)"), name_.c_str(), device_id_, product_id_, version_.c_str());
+        snprintf(&str[0], str.capacity() + 1, "%s (DeviceID:0x%02X, ProductID:%d, Version:%s)", name_.c_str(), device_id_, product_id_, version_.c_str());
     } else {
-        snprintf_P(&str[0],
-                   str.capacity() + 1,
-                   PSTR("%s %s (DeviceID:0x%02X ProductID:%d, Version:%s)"),
-                   brand_to_string().c_str(),
-                   name_.c_str(),
-                   device_id_,
-                   product_id_,
-                   version_.c_str());
+        snprintf(&str[0],
+                 str.capacity() + 1,
+                 "%s %s (DeviceID:0x%02X ProductID:%d, Version:%s)",
+                 brand_to_string().c_str(),
+                 name_.c_str(),
+                 device_id_,
+                 product_id_,
+                 version_.c_str());
     }
 
     return str;
@@ -322,9 +322,9 @@ std::string EMSdevice::to_string() const {
 std::string EMSdevice::to_string_short() const {
     std::string str(160, '\0');
     if (brand_ == Brand::NO_BRAND) {
-        snprintf_P(&str[0], str.capacity() + 1, PSTR("%s: %s"), device_type_name().c_str(), name_.c_str());
+        snprintf(&str[0], str.capacity() + 1, "%s: %s", device_type_name().c_str(), name_.c_str());
     } else {
-        snprintf_P(&str[0], str.capacity() + 1, PSTR("%s: %s %s"), device_type_name().c_str(), brand_to_string().c_str(), name_.c_str());
+        snprintf(&str[0], str.capacity() + 1, "%s: %s %s", device_type_name().c_str(), brand_to_string().c_str(), name_.c_str());
     }
     return str;
 }
@@ -407,7 +407,7 @@ char * EMSdevice::show_telegram_handlers(char * result) {
     char    str[10];
     uint8_t i = 0;
     for (const auto & tf : telegram_functions_) {
-        snprintf_P(str, sizeof(str), PSTR("0x%02X"), tf.telegram_type_id_);
+        snprintf(str, sizeof(str), "0x%02X", tf.telegram_type_id_);
         strlcat(result, str, 200);
         if (++i < size) {
             strlcat(result, " ", 200);
@@ -631,7 +631,7 @@ void EMSdevice::generate_values_json_web(JsonObject & json) {
                     obj["n"] = dv.full_name;
                 } else {
                     char name[50];
-                    snprintf_P(name, sizeof(name), "%s %s", tag_to_string(dv.tag).c_str(), uuid::read_flash_string(dv.full_name).c_str());
+                    snprintf(name, sizeof(name), "%s %s", tag_to_string(dv.tag).c_str(), uuid::read_flash_string(dv.full_name).c_str());
                     obj["n"] = name;
                 }
 
@@ -855,7 +855,7 @@ bool EMSdevice::generate_values_json(JsonObject & root, const uint8_t tag_filter
             if (console) {
                 // prefix the tag in brackets, unless it's Boiler because we're naughty and use tag for the MQTT topic
                 if (have_tag) {
-                    snprintf_P(name, 80, "%s %s", tag_to_string(dv.tag).c_str(), uuid::read_flash_string(dv.full_name).c_str());
+                    snprintf(name, 80, "%s %s", tag_to_string(dv.tag).c_str(), uuid::read_flash_string(dv.full_name).c_str());
                 } else {
                     strcpy(name, uuid::read_flash_string(dv.full_name).c_str()); // use full name
                 }
@@ -955,7 +955,7 @@ bool EMSdevice::generate_values_json(JsonObject & root, const uint8_t tag_filter
                     time_value          = (divider) ? time_value / divider : time_value; // sometimes we need to divide by 60
                     if (console) {
                         char time_s[40];
-                        snprintf_P(time_s, sizeof(time_s), PSTR("%d days %d hours %d minutes"), (time_value / 1440), ((time_value % 1440) / 60), (time_value % 60));
+                        snprintf(time_s, sizeof(time_s), "%d days %d hours %d minutes", (time_value / 1440), ((time_value % 1440) / 60), (time_value % 60));
                         json[name] = time_s;
                     } else {
                         json[name] = time_value;
