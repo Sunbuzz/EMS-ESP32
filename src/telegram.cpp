@@ -195,6 +195,7 @@ void RxService::add(uint8_t * data, uint8_t length) {
         message_length = length - 7;
     }
 
+
     // if we're watching and "raw" print out actual telegram as bytes to the console
     // including the CRC at the end
     if (EMSESP::watch() == EMSESP::Watch::WATCH_RAW) {
@@ -212,6 +213,27 @@ void RxService::add(uint8_t * data, uint8_t length) {
 #ifdef EMSESP_DEBUG
     LOG_DEBUG(F("[DEBUG] New Rx telegram, message length %d"), message_length);
 #endif
+
+    if (dest == ems_bus_id() && operation == Telegram::Operation::RX_READ) {    // For me?
+        uint8_t requested_lenght = message_data[0];
+        uint8_t version[] = { 74, 0x03, 0x02, 0x00, 0x00, 0x00 ,0x00, 0x00, 0x00, 0x00 }; 
+        LOG_DEBUG("Telegram for me!");
+        //  We only answer on Version(0x02)
+        if (type_id == 0x02) {
+            // Give them my product_id and version
+            EMSESP::send_write_request(0x02, src, offset,(uint8_t *) (&version + offset), (10-offset) < requested_lenght ? (10-offset) : requested_lenght, 0);
+            if (src == ems_bus_id()) { // From Me<-Me 
+                operation = Telegram::Operation::RX;
+                message_data = ((uint8_t *) (&version + offset));
+                message_length = requested_lenght ? (10-offset) : requested_lenght;
+            }
+            else return;
+        }
+        else {
+            EMSESP::send_write_request(type_id, src, offset, (uint8_t*) "", 0, 0);
+            return;
+        }
+    } 
 
     // if we don't have a type_id exit,
     // do not exit on empty message, it is checked for toggle fetch

@@ -71,6 +71,7 @@ MAKE_PSTR_WORD(publish)
 MAKE_PSTR_WORD(timeout)
 MAKE_PSTR_WORD(board_profile)
 MAKE_PSTR_WORD(sensorname)
+MAKE_PSTR_WORD(pump)
 
 // for commands
 MAKE_PSTR_WORD(call)
@@ -251,7 +252,7 @@ MAKE_PSTR_LIST(enum_reset, F_(maintenance), F_(error))
 MAKE_PSTR_LIST(enum_bool, F_(off), F_(on))
 
 //heatpump
-MAKE_PSTR_LIST(enum_hpactivity, F("none"), F("heating"), F("cooling"), F("warm water"), F("pool") )
+MAKE_PSTR_LIST(enum_hpactivity, F("none"), F("heating"), F("cooling"), F("warm water"), F("pool"), F("pool/mix") )
 
 // mixer
 MAKE_PSTR_LIST(enum_shunt, F("stopped"), F("opening"), F("closing"), F("open"), F("close") )
@@ -458,6 +459,9 @@ MAKE_PSTR_LIST(hpBrineOut, F("hpbrineout"), F("Brine out/Condenser"))
 MAKE_PSTR_LIST(hpSuctionGas, F("hpsuctiongas"), F("Suction gas"))
 MAKE_PSTR_LIST(hpHotGas, F("hphotgas"), F("Hot gas/Compressed"))
 MAKE_PSTR_LIST(hpSwitchValve, F("hpswitchvalve"), F("Switch Valve"))
+MAKE_PSTR_LIST(hpBrinePumpOn, F("hpbrinepumpon"), F("Brine pump on (coldcarrier)"))
+MAKE_PSTR_LIST(hpCircPumpOn, F("hpcircpumpon"), F("Circulation pump on (heatcarrier)"))
+MAKE_PSTR_LIST(hpHCPumpOn, F("hphcpumpon"), F("Circulation pump on (radiator/floor)"))
 MAKE_PSTR_LIST(hpActivity, F("hpactivity"), F("Compressor Activity"))
 MAKE_PSTR_LIST(hpTc0, F("hptc0"), F("Heat carrier return (TC0)"))
 MAKE_PSTR_LIST(hpTc1, F("hptc1"), F("Heat carrier forward (TC1)"))
@@ -471,9 +475,12 @@ MAKE_PSTR_LIST(hpTl2, F("hptl2"), F("air inlet temperature (TL2)"))
 MAKE_PSTR_LIST(hpPl1, F("hppl1"), F("low pressure side temperature (PL1)"))
 MAKE_PSTR_LIST(hpPh1, F("hpph1"), F("high pressure side temperature (PH1)"))
 MAKE_PSTR_LIST(poolSetTemp, F("poolsettemp"), F("pool set temperature"))
+MAKE_PSTR_LIST(poolActivated, F("poolactivated"), F("pool activated"))
 MAKE_PSTR_LIST(poolTemp, F("pooltemp"), F("pool temperature"))
 MAKE_PSTR_LIST(poolShuntStatus, F("poolshuntstatus"), F("pool shunt status opening/closing"))
 MAKE_PSTR_LIST(poolShunt, F("poolshunt"), F("pool shunt open/close (0% = pool / 100% = heat)"))
+// Poolpump
+MAKE_PSTR_LIST(poolPump, F("poolpump"), F("pool pump activated"))
 
 // the following are warm water for the boiler and automatically tagged with 'ww'
 MAKE_PSTR_LIST(wwSelTemp, F("wwseltemp"), F("selected temperature"))

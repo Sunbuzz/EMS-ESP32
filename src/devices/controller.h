@@ -31,6 +31,10 @@ class Controller : public EMSdevice {
 
   private:
     static uuid::log::Logger logger_;
+    char   dateTime_[25];  // date and time stamp
+
+    void process_RCTime(std::shared_ptr<const Telegram> telegram);
+
 };
 
 } // namespace emsesp
