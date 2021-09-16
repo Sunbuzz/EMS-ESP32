@@ -166,11 +166,11 @@ class Boiler : public EMSdevice {
     uint16_t maintenanceTime_;
 
     // heatpump
-    uint8_t hpPower_;
-    uint8_t hpCompOn_;
-    uint8_t hpBrinePumpSpd_;
-    uint8_t hpCompSpd_;
-    uint8_t hpCircSpd_;
+    uint8_t  hpPower_;
+    uint8_t  hpCompOn_;
+    uint8_t  hpBrinePumpSpd_;
+    uint8_t  hpCompSpd_;
+    uint8_t  hpCircSpd_;
     uint16_t hpBrineIn_;
     uint16_t hpBrineOut_;
     uint16_t hpSuctionGas_;

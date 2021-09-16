@@ -255,7 +255,7 @@ MAKE_PSTR_LIST(enum_bool, F_(off), F_(on))
 MAKE_PSTR_LIST(enum_hpactivity, F("none"), F("heating"), F("cooling"), F("warm water"), F("pool"), F("pool/mix") )
 
 // mixer
-MAKE_PSTR_LIST(enum_shunt, F("stopped"), F("opening"), F("closing"), F("open"), F("close") )
+MAKE_PSTR_LIST(enum_shunt, F("stopped"), F("opening"), F("closing"), F("open"), F("close"))
 
 // thermostat
 MAKE_PSTR_WORD(light)

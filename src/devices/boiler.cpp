@@ -270,7 +270,8 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
     register_device_value(TAG_BOILER_DATA_WW, &wwCurFlow_, DeviceValueType::UINT, FL_(div10), FL_(wwCurFlow), DeviceValueUOM::LMIN);
     register_device_value(TAG_BOILER_DATA_WW, &wwStorageTemp1_, DeviceValueType::USHORT, FL_(div10), FL_(wwStorageTemp1), DeviceValueUOM::DEGREES);
     register_device_value(TAG_BOILER_DATA_WW, &wwStorageTemp2_, DeviceValueType::USHORT, FL_(div10), FL_(wwStorageTemp2), DeviceValueUOM::DEGREES);
-    register_device_value(TAG_BOILER_DATA_WW, &wwActivated_, DeviceValueType::BOOL, nullptr, FL_(wwActivated), DeviceValueUOM::BOOLEAN, MAKE_CF_CB(set_warmwater_activated));
+    register_device_value(
+        TAG_BOILER_DATA_WW, &wwActivated_, DeviceValueType::BOOL, nullptr, FL_(wwActivated), DeviceValueUOM::BOOLEAN, MAKE_CF_CB(set_warmwater_activated));
     register_device_value(TAG_BOILER_DATA_WW, &wwOneTime_, DeviceValueType::BOOL, nullptr, FL_(wwOneTime), DeviceValueUOM::BOOLEAN, MAKE_CF_CB(set_warmwater_onetime));
     register_device_value(TAG_BOILER_DATA_WW, &wwDisinfecting_, DeviceValueType::BOOL, nullptr, FL_(wwDisinfecting), DeviceValueUOM::BOOLEAN);
     register_device_value(TAG_BOILER_DATA_WW, &wwCharging_, DeviceValueType::BOOL, nullptr, FL_(wwCharging), DeviceValueUOM::BOOLEAN);
@@ -298,7 +299,7 @@ bool Boiler::publish_ha_config() {
     doc["ic"]      = F_(icondevice);
 
     char stat_t[Mqtt::MQTT_TOPIC_MAX_SIZE];
-    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/%s"), Mqtt::base().c_str(), Mqtt::tag_to_topic(device_type(), DeviceValueTAG::TAG_NONE).c_str());
+    snprintf_P(stat_t, sizeof(stat_t), "%s/%s", Mqtt::base().c_str(), Mqtt::tag_to_topic(device_type(), DeviceValueTAG::TAG_NONE).c_str());
     doc["stat_t"] = stat_t;
 
     char name_s[40];
@@ -315,7 +316,7 @@ bool Boiler::publish_ha_config() {
     ids.add("ems-esp-boiler");
 
     char topic[Mqtt::MQTT_TOPIC_MAX_SIZE];
-    snprintf_P(topic, sizeof(topic), PSTR("sensor/%s/boiler/config"), Mqtt::base().c_str());
+    snprintf_P(topic, sizeof(topic), "sensor/%s/boiler/config", Mqtt::base().c_str());
     Mqtt::publish_ha(topic,
                      doc.as<JsonObject>()); // publish the config payload with retain flag
 
@@ -711,8 +712,8 @@ void Boiler::process_HpPower(std::shared_ptr<const Telegram> telegram) {
 
     hpHeatingOn_ = 0;
     hpCoolingOn_ = 0;
-    hpWwOn_ = 0;
-    hpPoolOn_ = 0;
+    hpWwOn_      = 0;
+    hpPoolOn_    = 0;
 
     switch (hpActivity_) {
         case 1: { 
@@ -771,7 +772,7 @@ void Boiler::process_HpOutdoor(std::shared_ptr<const Telegram> telegram) {
 }
 
 // Heatpump pool unit - type 0x48A
-// 08 00 FF 00 03 8A 01 4C 01 0C 00 00 0A 00 1E 00 00 01 00 04 4A 00 
+// 08 00 FF 00 03 8A 01 4C 01 0C 00 00 0A 00 1E 00 00 01 00 04 4A 00
 
 void Boiler::process_HpPool(std::shared_ptr<const Telegram> telegram) {
     has_update(telegram->read_value(poolActivated_, 0));
@@ -829,7 +830,7 @@ void Boiler::process_UBAMaintenanceStatus(std::shared_ptr<const Telegram> telegr
 
     // ignore if 0, which means all is ok
     if (Helpers::hasValue(message_code) && message_code > 0) {
-        snprintf_P(maintenanceMessage_, sizeof(maintenanceMessage_), PSTR("H%02d"), message_code);
+        snprintf_P(maintenanceMessage_, sizeof(maintenanceMessage_), "H%02d", message_code);
     }
 }
 
@@ -856,7 +857,7 @@ void Boiler::process_UBAErrorMessage(std::shared_ptr<const Telegram> telegram) {
         uint32_t date  = (year - 2000) * 535680UL + month * 44640UL + day * 1440UL + hour * 60 + min;
         // store only the newest code from telegrams 10 and 11
         if (date > lastCodeDate_) {
-            snprintf_P(lastCode_, sizeof(lastCode_), PSTR("%s(%d) %02d.%02d.%d %02d:%02d"), code, codeNo, day, month, year, hour, min);
+            snprintf_P(lastCode_, sizeof(lastCode_), "%s(%d) %02d.%02d.%d %02d:%02d", code, codeNo, day, month, year, hour, min);
             lastCodeDate_ = date;
         }
     }
@@ -882,7 +883,7 @@ void Boiler::process_UBAMaintenanceData(std::shared_ptr<const Telegram> telegram
     uint8_t month = telegram->message_data[3];
     uint8_t year  = telegram->message_data[4];
     if (day > 0 && month > 0) {
-        snprintf_P(maintenanceDate_, sizeof(maintenanceDate_), PSTR("%02d.%02d.%04d"), day, month, year + 2000);
+        snprintf_P(maintenanceDate_, sizeof(maintenanceDate_), "%02d.%02d.%04d", day, month, year + 2000);
     }
 }
 
@@ -1500,15 +1501,15 @@ bool Boiler::set_maintenancedate(const char * value, const int8_t id) {
 
 // Set the pool temperature 0x48A
 bool Boiler::set_pool_temp(const char * value, const int8_t id) {
-    float v = 0;
+    float   v  = 0;
     uint8_t v2 = 0;
     if (!Helpers::value2float(value, v)) {
         LOG_WARNING(F("Set pool water temperature: Invalid value"));
         return false;
     }
-    v2 = (int( (v * 2) + 0.5) & 0xFF);
+    v2 = (int((v * 2) + 0.5) & 0xFF);
 
-    LOG_INFO(F("Setting pool temperature to %d C"), v2/2);
+    LOG_INFO(F("Setting pool temperature to %d C"), v2 / 2);
     write_command(0x48A, 1, v2, 0x48A);
 
     return true;
