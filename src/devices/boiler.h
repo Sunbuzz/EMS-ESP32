@@ -167,6 +167,7 @@ class Boiler : public EMSdevice {
 
     // heatpump
     uint8_t  hpPower_;
+    uint8_t  hpAuxPower_;
     uint8_t  hpCompOn_;
     uint8_t  hpBrinePumpSpd_;
     uint8_t  hpCompSpd_;
@@ -185,6 +186,8 @@ class Boiler : public EMSdevice {
     uint8_t hpWwOn_;
     uint8_t hpPoolOn_;
     uint8_t hpHeatingOn;
+    uint8_t hpAuxStage1_;
+    uint8_t hpAuxStage2_;
     int16_t hpTc0_;
     int16_t hpTc1_;
     int16_t hpTc3_;

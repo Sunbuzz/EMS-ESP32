@@ -197,6 +197,7 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
         register_device_value(TAG_BOILER_DATA, &hpCompOn_, DeviceValueType::BOOL, nullptr, FL_(hpCompOn), DeviceValueUOM::BOOLEAN);
         register_device_value(TAG_BOILER_DATA, &hpCompSpd_, DeviceValueType::UINT, nullptr, FL_(hpCompSpd), DeviceValueUOM::PERCENT);
         register_device_value(TAG_BOILER_DATA, &hpPower_, DeviceValueType::UINT, FL_(div10), FL_(hpPower), DeviceValueUOM::KW);
+        register_device_value(TAG_BOILER_DATA, &hpAuxPower_, DeviceValueType::UINT, FL_(div10), FL_(hpAuxPower), DeviceValueUOM::KW);
         register_device_value(TAG_BOILER_DATA, &hpBrinePumpOn_, DeviceValueType::BOOL, nullptr, FL_(hpBrinePumpOn), DeviceValueUOM::BOOLEAN);
         register_device_value(TAG_BOILER_DATA, &hpBrinePumpSpd_, DeviceValueType::UINT, nullptr, FL_(hpBrinePumpSpd), DeviceValueUOM::PERCENT);
         register_device_value(TAG_BOILER_DATA, &hpCircPumpOn_, DeviceValueType::BOOL, nullptr, FL_(hpCircPumpOn), DeviceValueUOM::BOOLEAN);
@@ -207,6 +208,8 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
         register_device_value(TAG_BOILER_DATA, &hpBrineOut_, DeviceValueType::SHORT, FL_(div10), FL_(hpBrineOut), DeviceValueUOM::DEGREES);
         register_device_value(TAG_BOILER_DATA, &hpSuctionGas_, DeviceValueType::SHORT, FL_(div10), FL_(hpSuctionGas), DeviceValueUOM::DEGREES);
         register_device_value(TAG_BOILER_DATA, &hpHotGas_, DeviceValueType::SHORT, FL_(div10), FL_(hpHotGas), DeviceValueUOM::DEGREES);
+        register_device_value(TAG_BOILER_DATA, &hpAuxStage1_, DeviceValueType::BOOL, nullptr, FL_(hpAuxStage1), DeviceValueUOM::BOOLEAN);
+        register_device_value(TAG_BOILER_DATA, &hpAuxStage2_, DeviceValueType::BOOL, nullptr, FL_(hpAuxStage2), DeviceValueUOM::BOOLEAN);
         register_device_value(TAG_BOILER_DATA, &hpTc0_, DeviceValueType::SHORT, FL_(div10), FL_(hpTc0), DeviceValueUOM::DEGREES);
         register_device_value(TAG_BOILER_DATA, &hpTc1_, DeviceValueType::SHORT, FL_(div10), FL_(hpTc1), DeviceValueUOM::DEGREES);
         register_device_value(TAG_BOILER_DATA, &hpTc3_, DeviceValueType::SHORT, FL_(div10), FL_(hpTc3), DeviceValueUOM::DEGREES);
@@ -698,6 +701,7 @@ void Boiler::process_HpHCInfo(std::shared_ptr<const Telegram> telegram) {
 
 void Boiler::process_HpPower(std::shared_ptr<const Telegram> telegram) {
     has_update(telegram->read_value(hpPower_, 11));
+    has_update(telegram->read_value(hpAuxPower_, 9));
     has_update(telegram->read_bitvalue(hpCompOn_, 3, 4));
     has_update(telegram->read_value(hpBrinePumpSpd_, 5));
     has_update(telegram->read_value(hpCompSpd_, 17));
@@ -706,6 +710,9 @@ void Boiler::process_HpPower(std::shared_ptr<const Telegram> telegram) {
     has_update(telegram->read_bitvalue(hpBrinePumpOn_, 0, 0));
     has_update(telegram->read_bitvalue(hpCircPumpOn_, 0, 1));
     has_update(telegram->read_bitvalue(hpSwitchValve_, 0, 6));
+    has_update(telegram->read_bitvalue(hpAuxStage1_, 6, 5));
+    has_update(telegram->read_bitvalue(hpAuxStage2_, 6, 6));
+    
     if (hpCompOn_ == 0) hpActivity_ = 0;
     
     uint8_t savePool = hpPoolOn_;
