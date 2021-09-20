@@ -202,7 +202,7 @@ bool Thermostat::publish_ha_config() {
     doc["ic"]      = F_(icondevice);
 
     char stat_t[Mqtt::MQTT_TOPIC_MAX_SIZE];
-    snprintf_P(stat_t, sizeof(stat_t), "%s/%s", Mqtt::base().c_str(), Mqtt::tag_to_topic(device_type(), DeviceValueTAG::TAG_NONE).c_str());
+    snprintf(stat_t, sizeof(stat_t), "%s/%s", Mqtt::base().c_str(), Mqtt::tag_to_topic(device_type(), DeviceValueTAG::TAG_NONE).c_str());
     doc["stat_t"] = stat_t;
 
     char name_s[40];
@@ -219,7 +219,7 @@ bool Thermostat::publish_ha_config() {
     ids.add("ems-esp-thermostat");
 
     char topic[Mqtt::MQTT_TOPIC_MAX_SIZE];
-    snprintf_P(topic, sizeof(topic), "sensor/%s/thermostat/config", Mqtt::base().c_str());
+    snprintf(topic, sizeof(topic), "sensor/%s/thermostat/config", Mqtt::base().c_str());
     Mqtt::publish_ha(topic, doc.as<JsonObject>()); // publish the config payload with retain flag
 
     return true;
@@ -251,6 +251,11 @@ std::shared_ptr<Thermostat::HeatingCircuit> Thermostat::heating_circuit(const ui
 // returns pointer to the HeatingCircuit or nullptr if it can't be found
 // if its a new one, the object will be created and also the fetch flags set
 std::shared_ptr<Thermostat::HeatingCircuit> Thermostat::heating_circuit(std::shared_ptr<const Telegram> telegram) {
+    // only do this for the current master thermostat
+    if (device_id() != EMSESP::actual_master_thermostat()) {
+        return nullptr;
+    }
+
     // look through the Monitor and Set arrays to see if there is a match
     uint8_t hc_num  = 0;
     bool    toggle_ = false;
@@ -385,13 +390,13 @@ void Thermostat::publish_ha_config_hc(uint8_t hc_num) {
     StaticJsonDocument<EMSESP_JSON_SIZE_HA_CONFIG> doc;
 
     char str1[20];
-    snprintf_P(str1, sizeof(str1), "Thermostat hc%d", hc_num);
+    snprintf(str1, sizeof(str1), "Thermostat hc%d", hc_num);
 
     char str2[20];
-    snprintf_P(str2, sizeof(str2), "thermostat_hc%d", hc_num);
+    snprintf(str2, sizeof(str2), "thermostat_hc%d", hc_num);
 
     char str3[25];
-    snprintf_P(str3, sizeof(str3), "~/%s", str2);
+    snprintf(str3, sizeof(str3), "~/%s", str2);
     doc["mode_cmd_t"] = str3;
     doc["temp_cmd_t"] = str3;
     doc["name"]       = str1;
@@ -402,23 +407,23 @@ void Thermostat::publish_ha_config_hc(uint8_t hc_num) {
 
     char topic_t[Mqtt::MQTT_TOPIC_MAX_SIZE];
     if (Mqtt::nested_format() == 1) {
-        snprintf_P(topic_t, sizeof(topic_t), "~/%s", Mqtt::tag_to_topic(EMSdevice::DeviceType::THERMOSTAT, DeviceValueTAG::TAG_NONE).c_str());
+        snprintf(topic_t, sizeof(topic_t), "~/%s", Mqtt::tag_to_topic(EMSdevice::DeviceType::THERMOSTAT, DeviceValueTAG::TAG_NONE).c_str());
 
         char mode_str_tpl[40];
-        snprintf_P(mode_str_tpl, sizeof(mode_str_tpl), "{{value_json.hc%d.hamode}}", hc_num);
+        snprintf(mode_str_tpl, sizeof(mode_str_tpl), "{{value_json.hc%d.hamode}}", hc_num);
         doc["mode_stat_tpl"] = mode_str_tpl;
 
         char seltemp_str[30];
-        snprintf_P(seltemp_str, sizeof(seltemp_str), "{{value_json.hc%d.seltemp}}", hc_num);
+        snprintf(seltemp_str, sizeof(seltemp_str), "{{value_json.hc%d.seltemp}}", hc_num);
         doc["temp_stat_tpl"] = seltemp_str;
 
         char currtemp_str[30];
-        snprintf_P(currtemp_str, sizeof(currtemp_str), "{{value_json.hc%d.hatemp}}", hc_num);
+        snprintf(currtemp_str, sizeof(currtemp_str), "{{value_json.hc%d.hatemp}}", hc_num);
         doc["curr_temp_tpl"] = currtemp_str;
 
 
     } else {
-        snprintf_P(topic_t, sizeof(topic_t), "~/%s", Mqtt::tag_to_topic(EMSdevice::DeviceType::THERMOSTAT, DeviceValueTAG::TAG_HC1 + hc_num - 1).c_str());
+        snprintf(topic_t, sizeof(topic_t), "~/%s", Mqtt::tag_to_topic(EMSdevice::DeviceType::THERMOSTAT, DeviceValueTAG::TAG_HC1 + hc_num - 1).c_str());
 
         doc["mode_stat_tpl"] = FJSON("{{value_json.hamode}}");
         doc["temp_stat_tpl"] = FJSON("{{value_json.seltemp}}");
@@ -447,12 +452,12 @@ void Thermostat::publish_ha_config_hc(uint8_t hc_num) {
     ids.add("ems-esp-thermostat");
 
     char topic[Mqtt::MQTT_TOPIC_MAX_SIZE];
-    snprintf_P(topic, sizeof(topic), "climate/%s/thermostat_hc%d/config", Mqtt::base().c_str(), hc_num);
+    snprintf(topic, sizeof(topic), "climate/%s/thermostat_hc%d/config", Mqtt::base().c_str(), hc_num);
     Mqtt::publish_ha(topic, doc.as<JsonObject>()); // publish the config payload with retain flag
 
     // enable the a special "thermostat_hc<n>" topic to take both mode strings and floats for each of the heating circuits
     std::string topic2(Mqtt::MQTT_TOPIC_MAX_SIZE, '\0');
-    snprintf_P(&topic2[0], topic2.capacity() + 1, "thermostat_hc%d", hc_num);
+    snprintf(&topic2[0], topic2.capacity() + 1, "thermostat_hc%d", hc_num);
     register_mqtt_topic(topic2, [=](const char * m) { return thermostat_ha_cmd(m, hc_num); });
 }
 
@@ -1115,15 +1120,15 @@ void Thermostat::process_RCTime(std::shared_ptr<const Telegram> telegram) {
     char buf4[6];
     char buf5[6];
     char buf6[6];
-    snprintf_P(dateTime_,
-               sizeof(dateTime_),
-               "%s:%s:%s %s/%s/%s",
-               Helpers::smallitoa(buf1, telegram->message_data[2]),           // hour
-               Helpers::smallitoa(buf2, telegram->message_data[4]),           // minute
-               Helpers::smallitoa(buf3, telegram->message_data[5]),           // second
-               Helpers::smallitoa(buf4, telegram->message_data[3]),           // day
-               Helpers::smallitoa(buf5, telegram->message_data[1]),           // month
-               Helpers::itoa(buf6, (telegram->message_data[0] & 0x7F) + 2000) // year
+    snprintf(dateTime_,
+             sizeof(dateTime_),
+             "%s:%s:%s %s/%s/%s",
+             Helpers::smallitoa(buf1, telegram->message_data[2]),           // hour
+             Helpers::smallitoa(buf2, telegram->message_data[4]),           // minute
+             Helpers::smallitoa(buf3, telegram->message_data[5]),           // second
+             Helpers::smallitoa(buf4, telegram->message_data[3]),           // day
+             Helpers::smallitoa(buf5, telegram->message_data[1]),           // month
+             Helpers::itoa(buf6, (telegram->message_data[0] & 0x7F) + 2000) // year
     );
 
     has_update((strcmp(timeold, dateTime_) != 0));
@@ -1143,7 +1148,7 @@ void Thermostat::process_RCError(std::shared_ptr<const Telegram> telegram) {
     buf[2] = telegram->message_data[2];
     buf[3] = 0;
     has_update(telegram->read_value(errorNumber_, 3));
-    snprintf_P(errorCode_, sizeof(errorCode_), "%s(%d)", buf, errorNumber_);
+    snprintf(errorCode_, sizeof(errorCode_), "%s(%d)", buf, errorNumber_);
 }
 
 // 0x12 error log
@@ -1165,7 +1170,7 @@ void Thermostat::process_RCErrorMessage(std::shared_ptr<const Telegram> telegram
         uint8_t  day   = telegram->message_data[7];
         uint8_t  hour  = telegram->message_data[6];
         uint8_t  min   = telegram->message_data[8];
-        snprintf_P(lastCode_, sizeof(lastCode_), "%s(%d) %02d.%02d.%d %02d:%02d", code, codeNo, day, month, year, hour, min);
+        snprintf(lastCode_, sizeof(lastCode_), "%s(%d) %02d.%02d.%d %02d:%02d", code, codeNo, day, month, year, hour, min);
     }
 }
 
@@ -1372,7 +1377,7 @@ bool Thermostat::set_wwcharge(const char * value, const int8_t id) {
         return false;
     }
     LOG_INFO(F("Setting warm water charge to %s"), b ? F_(on) : F_(off));
-    write_command(0x02F5, 11, b, 0x02F5);
+    write_command(0x02F5, 11, b ? 0xFF : 0x00, 0x02F5);
     return true;
 }
 
@@ -1407,19 +1412,6 @@ bool Thermostat::set_wwprio(const char * value, const int8_t id) {
 
     return true;
 }
-
-// Set ww onetime RC300, ems+
-bool Thermostat::set_wwonetime(const char * value, const int8_t id) {
-    bool b = false;
-    if (!Helpers::value2bool(value, b)) {
-        LOG_WARNING(F("Set warm water onetime: Invalid value"));
-        return false;
-    }
-    LOG_INFO(F("Setting warm water onetime to %s"), b ? F_(on) : F_(off));
-    write_command(0x02F5, 11, b ? 0xFF : 0x00, 0x031D);
-    return true;
-}
-
 
 // sets the thermostat ww circulation working mode, where mode is a string
 bool Thermostat::set_wwcircmode(const char * value, const int8_t id) {
