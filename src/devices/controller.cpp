@@ -28,7 +28,7 @@ Controller::Controller(uint8_t device_type, uint8_t device_id, uint8_t product_i
     : EMSdevice(device_type, device_id, product_id, version, name, flags, brand) {
 
         register_telegram_type(0x06, F("RCTime"), false, MAKE_PF_CB(process_RCTime));
-        register_device_value(TAG_NONE, &dateTime_, DeviceValueType::TEXT, nullptr, FL_(dateTime), DeviceValueUOM::NONE);
+        register_device_value(TAG_NONE, &dateTime_, DeviceValueType::STRING, nullptr, FL_(dateTime), DeviceValueUOM::NONE);
 
 
 }
