@@ -741,8 +741,8 @@ void Boiler::process_HpPower(std::shared_ptr<const Telegram> telegram) {
         }  
         case 5: {
             // Mixing (heating both pool and heating)
-            if (poolShunt_ <= 95) hpPoolOn_ = 0xFF;
-            if (poolShunt_ >= 5) hpHeatingOn_ = 0xFF;
+            if (poolShunt_ < 100) hpPoolOn_ = 0xFF;
+            if (poolShunt_ > 0) hpHeatingOn_ = 0xFF;
             break;
         }
     } 
