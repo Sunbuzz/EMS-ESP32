@@ -147,10 +147,10 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
     register_device_value(TAG_BOILER_DATA, &burnWorkMin_, DeviceValueType::TIME, nullptr, FL_(burnWorkMin), DeviceValueUOM::MINUTES);
     register_device_value(TAG_BOILER_DATA, &heatWorkMin_, DeviceValueType::TIME, nullptr, FL_(heatWorkMin), DeviceValueUOM::MINUTES);
     register_device_value(TAG_BOILER_DATA, &UBAuptime_, DeviceValueType::TIME, nullptr, FL_(UBAuptime), DeviceValueUOM::MINUTES);
-    register_device_value(TAG_BOILER_DATA, &lastCode_, DeviceValueType::TEXT, nullptr, FL_(lastCode), DeviceValueUOM::NONE);
-    register_device_value(TAG_BOILER_DATA, &serviceCode_, DeviceValueType::TEXT, nullptr, FL_(serviceCode), DeviceValueUOM::NONE);
-    register_device_value(TAG_BOILER_DATA, &serviceCodeNumber_, DeviceValueType::USHORT, nullptr, FL_(serviceCodeNumber), DeviceValueUOM::NONE);
-    register_device_value(TAG_BOILER_DATA, &maintenanceMessage_, DeviceValueType::TEXT, nullptr, FL_(maintenanceMessage), DeviceValueUOM::NONE);
+    register_device_value(TAG_BOILER_DATA, &lastCode_, DeviceValueType::STRING, nullptr, FL_(lastCode), DeviceValueUOM::NONE);
+    register_device_value(TAG_BOILER_DATA, &serviceCode_, DeviceValueType::STRING, nullptr, FL_(serviceCode), DeviceValueUOM::NONE);
+    register_device_value(TAG_BOILER_DATA, &serviceCodeNumber_, DeviceValueType::USHORT, nullptr, FL_(serviceCodeNumber), DeviceValueUOM::NUM);
+    register_device_value(TAG_BOILER_DATA, &maintenanceMessage_, DeviceValueType::STRING, nullptr, FL_(maintenanceMessage), DeviceValueUOM::NONE);
     register_device_value(TAG_BOILER_DATA,
                           &maintenanceType_,
                           DeviceValueType::ENUM,
@@ -161,7 +161,7 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
     register_device_value(
         TAG_BOILER_DATA, &maintenanceTime_, DeviceValueType::USHORT, nullptr, FL_(maintenanceTime), DeviceValueUOM::HOURS, MAKE_CF_CB(set_maintenancetime));
     register_device_value(
-        TAG_BOILER_DATA, &maintenanceDate_, DeviceValueType::TEXT, nullptr, FL_(maintenanceDate), DeviceValueUOM::NONE, MAKE_CF_CB(set_maintenancedate));
+        TAG_BOILER_DATA, &maintenanceDate_, DeviceValueType::STRING, nullptr, FL_(maintenanceDate), DeviceValueUOM::NONE, MAKE_CF_CB(set_maintenancedate));
     // heatpump info
     if (model() == EMS_DEVICE_FLAG_HEATPUMP) {
         register_device_value(TAG_BOILER_DATA, &upTimeControl_, DeviceValueType::TIME, FL_(div60), FL_(upTimeControl), DeviceValueUOM::MINUTES);
@@ -245,7 +245,7 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
     register_device_value(
         TAG_BOILER_DATA_WW, &wwComfort_, DeviceValueType::ENUM, FL_(enum_comfort), FL_(wwComfort), DeviceValueUOM::LIST, MAKE_CF_CB(set_warmwater_mode));
     register_device_value(
-        TAG_BOILER_DATA_WW, &wwFlowTempOffset_, DeviceValueType::UINT, nullptr, FL_(wwFlowTempOffset), DeviceValueUOM::NONE, MAKE_CF_CB(set_wWFlowTempOffset));
+        TAG_BOILER_DATA_WW, &wwFlowTempOffset_, DeviceValueType::UINT, nullptr, FL_(wwFlowTempOffset), DeviceValueUOM::NUM, MAKE_CF_CB(set_wWFlowTempOffset));
     register_device_value(
         TAG_BOILER_DATA_WW, &wwMaxPower_, DeviceValueType::UINT, nullptr, FL_(wwMaxPower), DeviceValueUOM::PERCENT, MAKE_CF_CB(set_warmwater_maxpower));
     register_device_value(
@@ -276,7 +276,8 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
     register_device_value(
         TAG_BOILER_DATA_WW, &wwActivated_, DeviceValueType::BOOL, nullptr, FL_(wwActivated), DeviceValueUOM::BOOLEAN, MAKE_CF_CB(set_warmwater_activated));
     register_device_value(TAG_BOILER_DATA_WW, &wwOneTime_, DeviceValueType::BOOL, nullptr, FL_(wwOneTime), DeviceValueUOM::BOOLEAN, MAKE_CF_CB(set_warmwater_onetime));
-    register_device_value(TAG_BOILER_DATA_WW, &wwDisinfecting_, DeviceValueType::BOOL, nullptr, FL_(wwDisinfecting), DeviceValueUOM::BOOLEAN);
+    register_device_value(
+        TAG_BOILER_DATA_WW, &wwDisinfect_, DeviceValueType::BOOL, nullptr, FL_(wwDisinfect), DeviceValueUOM::BOOLEAN, MAKE_CF_CB(set_warmwater_disinfect));
     register_device_value(TAG_BOILER_DATA_WW, &wwCharging_, DeviceValueType::BOOL, nullptr, FL_(wwCharging), DeviceValueUOM::BOOLEAN);
     register_device_value(TAG_BOILER_DATA_WW, &wwRecharging_, DeviceValueType::BOOL, nullptr, FL_(wwRecharging), DeviceValueUOM::BOOLEAN);
     register_device_value(TAG_BOILER_DATA_WW, &wwTempOK_, DeviceValueType::BOOL, nullptr, FL_(wwTempOK), DeviceValueUOM::BOOLEAN);
@@ -486,7 +487,7 @@ void Boiler::process_UBAMonitorWW(std::shared_ptr<const Telegram> telegram) {
     has_update(telegram->read_value(wWStarts_, 13, 3)); // force to 3 bytes
 
     has_update(telegram->read_bitvalue(wwOneTime_, 5, 1));
-    has_update(telegram->read_bitvalue(wwDisinfecting_, 5, 2));
+    has_update(telegram->read_bitvalue(wwDisinfect_, 5, 2));
     has_update(telegram->read_bitvalue(wwCharging_, 5, 3));
     has_update(telegram->read_bitvalue(wwRecharging_, 5, 4));
     has_update(telegram->read_bitvalue(wwTempOK_, 5, 5));
@@ -626,7 +627,7 @@ void Boiler::process_UBAMonitorWWPlus(std::shared_ptr<const Telegram> telegram) 
     has_update(telegram->read_value(wWStarts_, 17, 3)); // force to 3 bytes
 
     has_update(telegram->read_bitvalue(wwOneTime_, 12, 2));
-    has_update(telegram->read_bitvalue(wwDisinfecting_, 12, 3));
+    has_update(telegram->read_bitvalue(wwDisinfect_, 12, 3));
     has_update(telegram->read_bitvalue(wwCharging_, 12, 4));
     has_update(telegram->read_bitvalue(wwRecharging_, 13, 4));
     has_update(telegram->read_bitvalue(wwTempOK_, 13, 5));
@@ -1351,6 +1352,24 @@ bool Boiler::set_warmwater_circulation(const char * value, const int8_t id) {
         write_command(EMS_TYPE_UBAFlags, 1, (v ? 0x22 : 0x02), 0xE9); // not sure if this is in flags
     } else {
         write_command(EMS_TYPE_UBAFlags, 1, (v ? 0x22 : 0x02), 0x34);
+    }
+
+    return true;
+}
+
+// starting warm water disinfect, set to off seems not working
+bool Boiler::set_warmwater_disinfect(const char * value, const int8_t id) {
+    bool v = false;
+    if (!Helpers::value2bool(value, v)) {
+        LOG_WARNING(F("Set warm water disinfect: Invalid value"));
+        return false;
+    }
+
+    LOG_INFO(F("Setting warm water disinfect %s"), v ? "on" : "off");
+    if (is_fetch(EMS_TYPE_UBAParameterWWPlus)) {
+        write_command(EMS_TYPE_UBAFlags, 0, (v ? 0x44 : 0x04), 0xE9); // not sure if this is in flags
+    } else {
+        write_command(EMS_TYPE_UBAFlags, 0, (v ? 0x44 : 0x04), 0x34);
     }
 
     return true;

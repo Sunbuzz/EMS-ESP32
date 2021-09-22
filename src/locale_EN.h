@@ -165,6 +165,8 @@ MAKE_PSTR_LIST(div2, F_(2))
 MAKE_PSTR_LIST(div10, F_(10))
 MAKE_PSTR_LIST(div100, F_(100))
 MAKE_PSTR_LIST(div60, F_(60))
+MAKE_PSTR_LIST(mul10, F("*10"))
+MAKE_PSTR_LIST(mul15, F("*15"))
 
 // Unit Of Measurement mapping - maps to DeviceValueUOM_s in emsdevice.cpp
 // uom - also used with HA see https://github.com/home-assistant/core/blob/d7ac4bd65379e11461c7ce0893d3533d8d8b8cbf/homeassistant/const.py#L384
@@ -300,9 +302,9 @@ MAKE_PSTR_WORD(design)
 MAKE_PSTR_WORD(tempauto)
 MAKE_PSTR_WORD(minflow)
 MAKE_PSTR_WORD(maxflow)
-
 MAKE_PSTR_WORD(rc3x)
 MAKE_PSTR_WORD(rc20)
+
 MAKE_PSTR(internal_temperature, "internal temperature")
 MAKE_PSTR(internal_setpoint, "internal setpoint")
 MAKE_PSTR(external_temperature, "external temperature")
@@ -355,7 +357,7 @@ MAKE_PSTR_LIST(enum_control, F_(off), F_(rc20), F_(rc3x))
 
 MAKE_PSTR_LIST(enum_wwProgMode, F("std prog"), F_(own_prog))
 MAKE_PSTR_LIST(enum_dayOfWeek, F("mo"), F("tu"), F("we"), F("th"), F("fr"), F("sa"), F("so"), F("all"))
-MAKE_PSTR_LIST(enum_wwChargeDuration, F_(off), F("15min"), F("30min"), F("45min"), F("60min"), F("75min"), F("90min"), F("105min"), F("120min"))
+// MAKE_PSTR_LIST(enum_wwChargeDuration, F_(off), F("15min"), F("30min"), F("45min"), F("60min"), F("75min"), F("90min"), F("105min"), F("120min"))
 
 // solar list
 MAKE_PSTR_LIST(enum_solarmode, F_(constant), F("pwm"), F("analog"))
@@ -364,12 +366,11 @@ MAKE_PSTR_LIST(enum_collectortype, F("flat"), F("vacuum"))
 // MQTT topics and full text for values and commands
 MAKE_PSTR(homeassistant, "homeassistant/")
 
-// id used to store the device ID, goes into MQTT payload
-// empty full name to prevent being shown in web or console
+// id used to store the device ID. empty full name so only gets displayed in the MQTT payload
 MAKE_PSTR_LIST(ID, F_(id))
 
 // Boiler
-// extra commands, no output
+// extra commands, with no json output
 MAKE_PSTR_LIST(wwtapactivated, F("wwtapactivated"), F("turn on/off DHW by going into maintenance mode"))
 MAKE_PSTR_LIST(reset, F("reset"), F("reset messages"))
 
@@ -390,7 +391,7 @@ MAKE_PSTR_LIST(curFlowTemp, F("curflowtemp"), F("current flow temperature"))
 MAKE_PSTR_LIST(retTemp, F("rettemp"), F("return temperature"))
 MAKE_PSTR_LIST(switchTemp, F("switchtemp"), F("mixing switch temperature"))
 MAKE_PSTR_LIST(sysPress, F("syspress"), F("system pressure"))
-MAKE_PSTR_LIST(boilTemp, F("boiltemp"), F("boiler temperature"))
+MAKE_PSTR_LIST(boilTemp, F("boiltemp"), F("actual boiler temperature"))
 MAKE_PSTR_LIST(exhaustTemp, F("exhausttemp"), F("exhaust temperature"))
 MAKE_PSTR_LIST(burnGas, F("burngas"), F("gas"))
 MAKE_PSTR_LIST(flameCurr, F("flamecurr"), F("flame current"))
@@ -509,7 +510,7 @@ MAKE_PSTR_LIST(wwStorageTemp1, F("wwstoragetemp1"), F("storage intern temperatur
 MAKE_PSTR_LIST(wwStorageTemp2, F("wwstoragetemp2"), F("storage extern temperature"))
 MAKE_PSTR_LIST(wwActivated, F("wwactivated"), F("activated"))
 MAKE_PSTR_LIST(wwOneTime, F("wwonetime"), F("one time charging"))
-MAKE_PSTR_LIST(wwDisinfecting, F("wwdisinfecting"), F("disinfecting"))
+MAKE_PSTR_LIST(wwDisinfect, F("wwdisinfect"), F("disinfection"))
 MAKE_PSTR_LIST(wwCharging, F("wwcharging"), F("charging"))
 MAKE_PSTR_LIST(wwRecharging, F("wwrecharging"), F("recharging"))
 MAKE_PSTR_LIST(wwTempOK, F("wwtempok"), F("temperature ok"))
@@ -524,21 +525,20 @@ MAKE_PSTR_LIST(wwHystOn, F("wwhyston"), F("hysteresis on temperature"))
 MAKE_PSTR_LIST(wwHystOff, F("wwhystoff"), F("hysteresis off temperature"))
 MAKE_PSTR_LIST(wwProgMode, F("wwprogmode"), F("program mode"))
 MAKE_PSTR_LIST(wwCircProg, F("wwcircprog"), F("circulation program mode"))
-MAKE_PSTR_LIST(wwDisinfect, F("wwdisinfect"), F("disinfection"))
+// MAKE_PSTR_LIST(wwDisinfect, F("wwdisinfect"), F("disinfection")) // same as in boiler
 MAKE_PSTR_LIST(wwDisinfectDay, F("wwdisinfectday"), F("disinfection day"))
 MAKE_PSTR_LIST(wwDisinfectHour, F("wwdisinfecthour"), F("disinfection hour"))
 MAKE_PSTR_LIST(wwMaxTemp, F("wwmaxtemp"), F("maximum temperature"))
 MAKE_PSTR_LIST(wwOneTimeKey, F("wwonetimekey"), F("one time key function"))
 
 // thermostat
-// extra commands
-MAKE_PSTR_LIST(switchtime, F("switchtime"), F("single program switchtime"))
-// extra commands, with no long name so they don't show up in WebUI
+// commands, with no long name so they only appear in the MQTT payloads
 MAKE_PSTR_LIST(temp, F("temp"))
 MAKE_PSTR_LIST(hatemp, F("hatemp"))
 MAKE_PSTR_LIST(hamode, F("hamode"))
 
 // mqtt values / commands
+MAKE_PSTR_LIST(switchtime, F("switchtime"), F("single program switchtime"))
 MAKE_PSTR_LIST(dateTime, F("datetime"), F("date/time"))
 MAKE_PSTR_LIST(errorCode, F("errorcode"), F("error code"))
 MAKE_PSTR_LIST(ibaMainDisplay, F("display"), F("display"))
@@ -564,7 +564,7 @@ MAKE_PSTR_LIST(setpoint_roomTemp, F("seltemp"), F("selected room temperature"))
 MAKE_PSTR_LIST(curr_roomTemp, F("currtemp"), F("current room temperature"))
 MAKE_PSTR_LIST(mode, F("mode"), F("mode"))
 MAKE_PSTR_LIST(modetype, F("modetype"), F("mode type"))
-MAKE_PSTR_LIST(fastheatupfactor, F("fastheatupfactor"), F("fast heatup factor"))
+MAKE_PSTR_LIST(fastheatup, F("fastheatup"), F("fast heatup"))
 MAKE_PSTR_LIST(daytemp, F("daytemp"), F("day temperature"))
 MAKE_PSTR_LIST(heattemp, F("heattemp"), F("heat temperature"))
 MAKE_PSTR_LIST(nighttemp, F("nighttemp"), F("night temperature"))
@@ -607,6 +607,7 @@ MAKE_PSTR_LIST(flowTempHc, F("flowtemphc"), F("flow temperature in assigned hc (
 MAKE_PSTR_LIST(pumpStatus, F("pumpstatus"), F("pump status in assigned hc (PC1)"))
 MAKE_PSTR_LIST(mixerStatus, F("valvestatus"), F("mixing valve actuator in assigned hc (VC1)"))
 MAKE_PSTR_LIST(flowTempVf, F("flowtempvf"), F("flow temperature in header (T0/Vf)"))
+MAKE_PSTR_LIST(mixerSetTime, F("valvesettime"), F("time to set valve"))
 MAKE_PSTR_LIST(wwPumpStatus, F("pumpstatus"), F("pump status in assigned wwc (PC1)"))
 MAKE_PSTR_LIST(wwTempStatus, F("wwtempstatus"), F("temperature switch in assigned wwc (MC1)"))
 MAKE_PSTR_LIST(wwTemp, F("wwtemp"), F("current temperature"))
