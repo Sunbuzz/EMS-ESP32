@@ -39,7 +39,9 @@ static const __FlashStringHelper * DeviceValueUOM_s[] __attribute__((__aligned__
     F_(kb),
     F_(seconds),
     F_(dbm),
-    F_(mv)
+    F_(mv),
+    F_(times),
+    F_(oclock)
 
 };
 
@@ -1051,7 +1053,7 @@ bool EMSdevice::generate_values_json(JsonObject & root, const uint8_t tag_filter
 void EMSdevice::publish_mqtt_ha_sensor() {
     for (auto & dv : devicevalues_) {
         if (dv.ha == DeviceValueHA::HA_VALUE) {
-            Mqtt::publish_ha_sensor(dv.type, dv.tag, dv.full_name, device_type_, dv.short_name, dv.uom);
+            Mqtt::publish_ha_sensor(dv.type, dv.tag, dv.full_name, dv.device_type, dv.short_name, dv.uom, dv.has_cmd);
             dv.ha |= DeviceValueHA::HA_DONE;
         }
     }

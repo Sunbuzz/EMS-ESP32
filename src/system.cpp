@@ -22,6 +22,20 @@
 #include "test/test.h"
 #endif
 
+#ifdef ESP_IDF_VERSION_MAJOR // IDF 4+
+#if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
+#include "../esp32/rom/rtc.h"
+#elif CONFIG_IDF_TARGET_ESP32S2
+#include "../esp32s2/rom/rtc.h"
+#elif CONFIG_IDF_TARGET_ESP32C3
+#include "../esp32c3/rom/rtc.h"
+#else
+#error Target CONFIG_IDF_TARGET is not supported
+#endif
+#else // ESP32 Before IDF 4.0
+#include "../rom/rtc.h"
+#endif
+
 namespace emsesp {
 
 uuid::log::Logger System::logger_{F_(system), uuid::log::Facility::KERN};
@@ -33,6 +47,7 @@ uuid::syslog::SyslogService System::syslog_;
 // init statics
 uint32_t System::heap_start_ = 1; // avoid using 0 to divide-by-zero later
 PButton  System::myPButton_;
+bool     System::restart_requested_ = false;
 
 // send on/off to a gpio pin
 // value: true = HIGH, false = LOW
@@ -68,16 +83,16 @@ bool System::command_fetch(const char * value, const int8_t id) {
             LOG_INFO(F("Requesting data from EMS devices"));
             EMSESP::fetch_device_values();
             return true;
-        } else if (value_s == "boiler") {
+        } else if (value_s == read_flash_string(F_(boiler))) {
             EMSESP::fetch_device_values_type(EMSdevice::DeviceType::BOILER);
             return true;
-        } else if (value_s == "thermostat") {
+        } else if (value_s == read_flash_string(F_(thermostat))) {
             EMSESP::fetch_device_values_type(EMSdevice::DeviceType::THERMOSTAT);
             return true;
-        } else if (value_s == "solar") {
+        } else if (value_s == read_flash_string(F_(solar))) {
             EMSESP::fetch_device_values_type(EMSdevice::DeviceType::SOLAR);
             return true;
-        } else if (value_s == "mixer") {
+        } else if (value_s == read_flash_string(F_(mixer))) {
             EMSESP::fetch_device_values_type(EMSdevice::DeviceType::MIXER);
             return true;
         }
@@ -95,22 +110,22 @@ bool System::command_publish(const char * value, const int8_t id) {
             EMSESP::publish_all(true); // includes HA
             LOG_INFO(F("Publishing all data to MQTT, including HA configs"));
             return true;
-        } else if (value_s == "boiler") {
+        } else if (value_s == read_flash_string(F_(boiler))) {
             EMSESP::publish_device_values(EMSdevice::DeviceType::BOILER);
             return true;
-        } else if (value_s == "thermostat") {
+        } else if (value_s == read_flash_string(F_(thermostat))) {
             EMSESP::publish_device_values(EMSdevice::DeviceType::THERMOSTAT);
             return true;
-        } else if (value_s == "solar") {
+        } else if (value_s == read_flash_string(F_(solar))) {
             EMSESP::publish_device_values(EMSdevice::DeviceType::SOLAR);
             return true;
-        } else if (value_s == "mixer") {
+        } else if (value_s == read_flash_string(F_(mixer))) {
             EMSESP::publish_device_values(EMSdevice::DeviceType::MIXER);
             return true;
         } else if (value_s == "other") {
             EMSESP::publish_other_values();
             return true;
-        } else if (value_s == "dallassensor") {
+        } else if (value_s == read_flash_string(F_(dallassensor))) {
             EMSESP::publish_sensor_values(true);
             return true;
         }
@@ -159,8 +174,8 @@ bool System::command_watch(const char * value, const int8_t id) {
 }
 
 // restart EMS-ESP
-void System::restart() {
-    LOG_INFO(F("Restarting system..."));
+void System::system_restart() {
+    LOG_INFO(F("Restarting EMS-ESP..."));
     Shell::loop_all();
     delay(1000); // wait a second
 #ifndef EMSESP_STANDALONE
@@ -191,7 +206,7 @@ void System::format(uuid::console::Shell & shell) {
     LITTLEFS.format();
 #endif
 
-    System::restart();
+    System::system_restart();
 }
 
 void System::syslog_start() {
@@ -454,6 +469,11 @@ void System::upload_status(bool in_progress) {
 
 // checks system health and handles LED flashing wizardry
 void System::loop() {
+    // check if we're supposed to do a reset/restart
+    if (restart_requested()) {
+        this->system_restart();
+    }
+
 #ifndef EMSESP_STANDALONE
     myPButton_.check(); // check button press
 
@@ -473,8 +493,8 @@ void System::loop() {
         last_heartbeat_ = currentMillis;
         send_heartbeat();
     }
-
 #ifndef EMSESP_STANDALONE
+
 #if defined(EMSESP_DEBUG)
 /*
     static uint32_t last_memcheck_ = 0;
@@ -484,6 +504,7 @@ void System::loop() {
     }
     */
 #endif
+
 #endif
 
 #endif
@@ -514,8 +535,8 @@ bool System::heartbeat_json(JsonObject & doc) {
     doc["uptime_sec"] = uuid::get_uptime_sec();
     doc["rxreceived"] = EMSESP::rxservice_.telegram_count();
     doc["rxfails"]    = EMSESP::rxservice_.telegram_error_count();
-    doc["txread"]     = EMSESP::txservice_.telegram_read_count();
-    doc["txwrite"]    = EMSESP::txservice_.telegram_write_count();
+    doc["txreads"]    = EMSESP::txservice_.telegram_read_count();
+    doc["txwrites"]   = EMSESP::txservice_.telegram_write_count();
     doc["txfails"]    = EMSESP::txservice_.telegram_fail_count();
     if (Mqtt::enabled()) {
         doc["mqttfails"] = Mqtt::publish_fails();
@@ -965,6 +986,7 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
 #ifndef EMSESP_STANDALONE
     node["freemem"] = ESP.getFreeHeap() / 1000L; // kilobytes
 #endif
+    node["reset_reason"] = EMSESP::system_.reset_reason(0) + " / " +  EMSESP::system_.reset_reason(1);
 
     node = json.createNestedObject("Status");
 
@@ -1063,12 +1085,33 @@ bool System::load_board_profile(std::vector<uint8_t> & data, const std::string &
     return true;
 }
 
-// restart command - perform a hard reset
+// restart command - perform a hard reset by setting flag
 bool System::command_restart(const char * value, const int8_t id) {
-#ifndef EMSESP_STANDALONE
-    ESP.restart();
-#endif
+    restart_requested(true);
     return true;
+}
+
+const std::string System::reset_reason(uint8_t cpu) {
+    switch (rtc_get_reset_reason(cpu)) {
+    case 1:  return ("Power on reset");
+    // case 2 :reset pin not on esp32
+    case 3:  return ("Software reset");
+    case 4:  return ("Legacy watch dog reset");
+    case 5:  return ("Deep sleep reset");
+    case 6:  return ("Reset by SDIO");
+    case 7:  return ("Timer group0 watch dog reset");
+    case 8:  return ("Timer group1 watch dog reset");
+    case 9:  return ("RTC watch dog reset");
+    case 10: return ("Intrusion reset CPU");
+    case 11: return ("Timer group reset CPU");
+    case 12: return ("Software reset CPU");
+    case 13: return ("RTC watch dog reset: CPU");
+    case 14: return ("APP CPU reseted by PRO CPU");
+    case 15: return ("Brownout reset");
+    case 16: return ("RTC watch dog reset: CPU+RTC");
+    default: break;
+    }
+    return ("Unkonwn");
 }
 
 } // namespace emsesp

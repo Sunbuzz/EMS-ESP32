@@ -96,6 +96,10 @@ class Mqtt {
 
     };
 
+    // for Home Assistant
+    enum class State_class { NONE, MEASUREMENT, TOTAL_INCREASING };
+    enum class Device_class { NONE, TEMPERATURE, POWER_FACTOR, ENERGY, PRESSURE, POWER, SIGNAL_STRENGTH };
+
     static constexpr uint8_t MQTT_TOPIC_MAX_SIZE = 128; // note this should really match the user setting in mqttSettings.maxTopicLength
 
     static void on_connect();
@@ -121,7 +125,8 @@ class Mqtt {
                                   const __FlashStringHelper * name,
                                   const uint8_t               device_type,
                                   const __FlashStringHelper * entity,
-                                  const uint8_t               uom = 0);
+                                  const uint8_t               uom,
+                                  const bool                  has_cmd = false);
     static void register_command(const uint8_t device_type, const __FlashStringHelper * cmd, cmdfunction_p cb, uint8_t flags = 0);
 
     static void show_topic_handlers(uuid::console::Shell & shell, const uint8_t device_type);

@@ -44,9 +44,8 @@ enum DeviceValueType : uint8_t {
 
 };
 
-// Unit Of Measurement mapping - maps to DeviceValueUOM_s in emsdevice.cpp
-// uom - also used with HA
-// sequence is important!
+// Unit Of Measurement mapping - maps to DeviceValueUOM_s in emsdevice.cpp. Sequence is important!!
+// also used with HA as uom
 enum DeviceValueUOM : uint8_t {
 
     NONE = 0, // 0
@@ -64,7 +63,9 @@ enum DeviceValueUOM : uint8_t {
     KB,       // 12
     SECONDS,  // 13
     DBM,      // 14
-    MV        // 15
+    MV,       // 15
+    TIMES,    // 16
+    OCLOCK    // 17
 
 };
 
@@ -76,7 +77,7 @@ MAKE_PSTR(icontime, "mdi:clock-outline")          // DeviceValueUOM::SECONDS MIN
 MAKE_PSTR(iconkb, "mdi:memory")                   // DeviceValueUOM::KB
 MAKE_PSTR(iconlmin, "mdi:water-boiler")           // DeviceValueUOM::LMIN
 MAKE_PSTR(iconkwh, "mdi:transmission-tower")      // DeviceValueUOM::KWH & WH
-MAKE_PSTR(iconua, "mdi:flash-circle")             // DeviceValueUOM::UA
+MAKE_PSTR(iconua, "mdi:lightning-bolt-circle")    // DeviceValueUOM::UA
 MAKE_PSTR(iconbar, "mdi:gauge")                   // DeviceValueUOM::BAR
 MAKE_PSTR(iconkw, "mdi:omega")                    // DeviceValueUOM::KW & W
 MAKE_PSTR(icondbm, "mdi:wifi-strength-2")         // DeviceValueUOM::DBM
@@ -425,7 +426,7 @@ class EMSdevice {
         void *                              value_p;      // pointer to variable of any type
         uint8_t                             type;         // DeviceValueType::*
         const __FlashStringHelper * const * options;      // options as a flash char array
-        uint8_t                             options_size; // # options in the char array, calculated
+        uint8_t                             options_size; // number of options in the char array, calculated
         const __FlashStringHelper *         short_name;   // used in MQTT
         const __FlashStringHelper *         full_name;    // used in Web and Console
         uint8_t                             uom;          // DeviceValueUOM::*

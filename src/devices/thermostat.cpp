@@ -543,11 +543,11 @@ uint8_t Thermostat::HeatingCircuit::get_mode_type() const {
     uint8_t model = get_model();
 
     if (model == EMS_DEVICE_FLAG_JUNKERS) {
-        if (modetype == 3) {
+        if (modetype == 2) {
             return HeatingCircuit::Mode::HEAT;
-        } else if (modetype == 2) {
-            return HeatingCircuit::Mode::ECO;
         } else if (modetype == 1) {
+            return HeatingCircuit::Mode::ECO;
+        } else if (modetype == 0) {
             return HeatingCircuit::Mode::NOFROST;
         }
     } else if ((model == EMS_DEVICE_FLAG_RC35) || (model == EMS_DEVICE_FLAG_RC30_N)) {
@@ -682,8 +682,8 @@ void Thermostat::process_RC20Set_2(std::shared_ptr<const Telegram> telegram) {
     has_update(telegram->read_value(hc->nighttemp, 1)); // is * 2,
     has_update(telegram->read_value(hc->daytemp, 2));   // is * 2,
     has_update(telegram->read_value(hc->mode, 3));
-    hc->hamode = hc->mode;                             // set special HA mode
-    has_update(telegram->read_value(hc->program, 11)); // 1 .. 9 predefined programs
+    hc->hamode = hc->mode;                                    // set special HA mode
+    has_update(telegram->read_enumvalue(hc->program, 11, 1)); // 1 .. 9 predefined programs
     // RC25 extension:
     has_update(telegram->read_value(ibaMinExtTemperature_, 14));
     has_update(telegram->read_value(hc->minflowtemp, 15));
@@ -727,11 +727,13 @@ void Thermostat::process_JunkersSet(std::shared_ptr<const Telegram> telegram) {
         return;
     }
 
-    has_update(telegram->read_value(hc->daytemp, 17));     // is * 2
-    has_update(telegram->read_value(hc->nighttemp, 16));   // is * 2
-    has_update(telegram->read_value(hc->nofrosttemp, 15)); // is * 2
-    has_update(telegram->read_enumvalue(hc->mode, 14, 1)); // 0 = nofrost, 1 = eco, 2 = heat, 3 = auto
-    hc->hamode = hc->mode ? hc->mode - 1 : 0;              // set special HA mode: off, on, auto
+    has_update(telegram->read_value(hc->daytemp, 17));        // is * 2
+    has_update(telegram->read_value(hc->nighttemp, 16));      // is * 2
+    has_update(telegram->read_value(hc->nofrosttemp, 15));    // is * 2
+    has_update(telegram->read_value(hc->control, 1));         // remote: 0-off, 1-FB10, 2-FB100
+    has_update(telegram->read_enumvalue(hc->program, 13, 1)); // 1-6: 1 = A, 2 = B,...
+    has_update(telegram->read_enumvalue(hc->mode, 14, 1));    // 0 = nofrost, 1 = eco, 2 = heat, 3 = auto
+    hc->hamode = hc->mode ? hc->mode - 1 : 0;                 // set special HA mode: off, on, auto
 }
 
 // type 0x0179, ff
@@ -741,11 +743,12 @@ void Thermostat::process_JunkersSet2(std::shared_ptr<const Telegram> telegram) {
         return;
     }
 
-    has_update(telegram->read_value(hc->daytemp, 7));     // is * 2
-    has_update(telegram->read_value(hc->nighttemp, 6));   // is * 2
-    has_update(telegram->read_value(hc->nofrosttemp, 5)); // is * 2
-    has_update(telegram->read_enumvalue(hc->mode, 4, 1)); // 0 = nofrost, 1 = eco, 2 = heat, 3 = auto
-    hc->hamode = hc->mode ? hc->mode - 1 : 0;             // set special HA mode: off, on, auto
+    has_update(telegram->read_value(hc->daytemp, 7));         // is * 2
+    has_update(telegram->read_value(hc->nighttemp, 6));       // is * 2
+    has_update(telegram->read_value(hc->nofrosttemp, 5));     // is * 2
+    has_update(telegram->read_enumvalue(hc->program, 10, 1)); // 1-6: 1 = A, 2 = B,...
+    has_update(telegram->read_enumvalue(hc->mode, 4, 1));     // 0 = nofrost, 1 = eco, 2 = heat, 3 = auto
+    hc->hamode = hc->mode ? hc->mode - 1 : 0;                 // set special HA mode: off, on, auto
 }
 
 // type 0xA3 - for external temp settings from the the RC* thermostats (e.g. RC35)
@@ -818,10 +821,14 @@ void Thermostat::process_JunkersMonitor(std::shared_ptr<const Telegram> telegram
         return;
     }
 
-    has_update(telegram->read_value(hc->curr_roomTemp, 4));     // value is * 10
     has_update(telegram->read_value(hc->setpoint_roomTemp, 2)); // value is * 10
+    has_update(telegram->read_enumvalue(hc->modetype, 0, 1));   // 1 = nofrost, 2 = eco, 3 = heat
 
-    has_update(telegram->read_enumvalue(hc->modetype, 0, 1)); // 1 = nofrost, 2 = eco, 3 = heat
+    if ((hc->control == 1) || (hc->control == 2)) {
+        has_update(telegram->read_value(hc->curr_roomTemp, 6)); // roomTemp from remote
+    } else {
+        has_update(telegram->read_value(hc->curr_roomTemp, 4)); // value is * 10
+    }
 }
 
 // type 0x02A5 - data from Worchester CRF200
@@ -860,6 +867,7 @@ void Thermostat::process_RC300Monitor(std::shared_ptr<const Telegram> telegram) 
     has_update(telegram->read_value(hc->setpoint_roomTemp, 3, 1)); // is * 2, force as single byte
     has_update(telegram->read_bitvalue(hc->summermode, 2, 4));
     has_update(telegram->read_value(hc->targetflowtemp, 4));
+    has_update(telegram->read_value(hc->curroominfl, 27));
 }
 
 // type 0x02B9 EMS+ for reading from RC300/RC310 thermostat
@@ -883,8 +891,8 @@ void Thermostat::process_RC300Set(std::shared_ptr<const Telegram> telegram) {
     has_update(telegram->read_value(hc->daytemp, 2));   // is * 2
     has_update(telegram->read_value(hc->nighttemp, 4)); // is * 2
     has_update(telegram->read_value(hc->tempautotemp, 8));
-    has_update(telegram->read_value(hc->manualtemp, 10)); // is * 2
-    has_update(telegram->read_value(hc->program, 11));    // timer program 1 or 2
+    has_update(telegram->read_value(hc->manualtemp, 10));     // is * 2
+    has_update(telegram->read_enumvalue(hc->program, 11, 1)); // timer program 1 or 2
 }
 
 // types 0x2AF ff
@@ -1305,22 +1313,26 @@ bool Thermostat::set_language(const char * value, const int8_t id) {
 
 // Set the control-mode for hc 0-off, 1-RC20, 2-RC3x
 bool Thermostat::set_control(const char * value, const int8_t id) {
-    uint8_t ctrl = 0;
-    if (!Helpers::value2enum(value, ctrl, FL_(enum_control))) {
-        LOG_WARNING(F("Set control: Invalid value"));
-        return false;
-    }
-
     uint8_t                                     hc_num = (id == -1) ? AUTO_HEATING_CIRCUIT : id;
     std::shared_ptr<Thermostat::HeatingCircuit> hc     = heating_circuit(hc_num);
     if (hc == nullptr) {
         return false;
     }
 
-    LOG_INFO(F("Setting circuit-control for hc%d to %d"), hc_num, ctrl);
-    write_command(set_typeids[hc->hc_num() - 1], 26, ctrl);
-
-    return true;
+    uint8_t ctrl = 0;
+    if (model() == EMS_DEVICE_FLAG_JUNKERS && !has_flags(EMS_DEVICE_FLAG_JUNKERS_OLD)) {
+        if (Helpers::value2enum(value, ctrl, FL_(enum_j_control))) {
+            LOG_INFO(F("Setting circuit-control for hc%d to %d"), hc_num, ctrl);
+            write_command(set_typeids[hc->hc_num() - 1], 1, ctrl);
+            return true;
+        }
+    } else if (Helpers::value2enum(value, ctrl, FL_(enum_control))) {
+        LOG_INFO(F("Setting circuit-control for hc%d to %d"), hc_num, ctrl);
+        write_command(set_typeids[hc->hc_num() - 1], 26, ctrl);
+        return true;
+    }
+    LOG_WARNING(F("Set control: Invalid value"));
+    return false;
 }
 
 // sets the thermostat ww working mode, where mode is a string, ems and ems+
@@ -1329,17 +1341,17 @@ bool Thermostat::set_wwmode(const char * value, const int8_t id) {
 
     if ((model() == EMS_DEVICE_FLAG_RC300) || (model() == EMS_DEVICE_FLAG_RC100)) {
         if (!Helpers::value2enum(value, set, FL_(enum_wwMode))) {
-            LOG_WARNING(F("Set warm water mode: Invalid mode"));
+            LOG_WARNING(F("Set ww mode: Invalid mode"));
             return false;
         }
-        LOG_INFO(F("Setting warm water mode to %s"), value);
+        LOG_INFO(F("Setting ww mode to %s"), value);
         write_command(0x02F5, 2, set, 0x02F5);
     } else {
         if (!Helpers::value2enum(value, set, FL_(enum_wwMode2))) {
-            LOG_WARNING(F("Set warm water mode: Invalid mode"));
+            LOG_WARNING(F("Set ww mode: Invalid mode"));
             return false;
         }
-        LOG_INFO(F("Setting warm water mode to %s"), value);
+        LOG_INFO(F("Setting ww mode to %s"), value);
         write_command(EMS_TYPE_wwSettings, 2, set, EMS_TYPE_wwSettings);
     }
     return true;
@@ -1349,10 +1361,10 @@ bool Thermostat::set_wwmode(const char * value, const int8_t id) {
 bool Thermostat::set_wwtemp(const char * value, const int8_t id) {
     int t = 0;
     if (!Helpers::value2number(value, t)) {
-        LOG_WARNING(F("Set warm water high temperature: Invalid value"));
+        LOG_WARNING(F("Set ww high temperature: Invalid value"));
         return false;
     }
-    LOG_INFO(F("Setting warm water high temperature to %d C"), t);
+    LOG_INFO(F("Setting ww high temperature to %d C"), t);
     write_command(0x031B, 0, t, 0x031B);
     return true;
 }
@@ -1361,10 +1373,10 @@ bool Thermostat::set_wwtemp(const char * value, const int8_t id) {
 bool Thermostat::set_wwtemplow(const char * value, const int8_t id) {
     int t = 0;
     if (!Helpers::value2number(value, t)) {
-        LOG_WARNING(F("Set warm water low temperature: Invalid value"));
+        LOG_WARNING(F("Set ww low temperature: Invalid value"));
         return false;
     }
-    LOG_INFO(F("Setting warm water low temperature to %d C"), t);
+    LOG_INFO(F("Setting ww low temperature to %d C"), t);
     write_command(0x031B, 1, t, 0x031B);
     return true;
 }
@@ -1373,10 +1385,10 @@ bool Thermostat::set_wwtemplow(const char * value, const int8_t id) {
 bool Thermostat::set_wwcharge(const char * value, const int8_t id) {
     bool b = false;
     if (!Helpers::value2bool(value, b)) {
-        LOG_WARNING(F("Set warm water charge: Invalid value"));
+        LOG_WARNING(F("Set ww charge: Invalid value"));
         return false;
     }
-    LOG_INFO(F("Setting warm water charge to %s"), b ? F_(on) : F_(off));
+    LOG_INFO(F("Setting ww charge to %s"), b ? F_(on) : F_(off));
     write_command(0x02F5, 11, b ? 0xFF : 0x00, 0x02F5);
     return true;
 }
@@ -1385,11 +1397,11 @@ bool Thermostat::set_wwcharge(const char * value, const int8_t id) {
 bool Thermostat::set_wwchargeduration(const char * value, const int8_t id) {
     int t = 0xFF;
     if (!Helpers::value2number(value, t)) {
-        LOG_WARNING(F("Set warm water charge duration: Invalid value"));
+        LOG_WARNING(F("Set ww charge duration: Invalid value"));
         return false;
     }
     t = (t + 8) / 15;
-    LOG_INFO(F("Setting warm water charge duration to %d min"), t * 15);
+    LOG_INFO(F("Setting ww charge duration to %d min"), t * 15);
     write_command(0x2F5, 10, t, 0x02F5);
     return true;
 }
@@ -1420,18 +1432,18 @@ bool Thermostat::set_wwcircmode(const char * value, const int8_t id) {
 
     if ((model() == EMS_DEVICE_FLAG_RC300) || (model() == EMS_DEVICE_FLAG_RC100)) {
         if (!Helpers::value2enum(value, set, FL_(enum_wwCircMode))) {
-            LOG_WARNING(F("Set warm water circulation mode: Invalid mode"));
+            LOG_WARNING(F("Set ww circulation mode: Invalid mode"));
             return false;
         }
-        LOG_INFO(F("Setting warm water circulation mode to %s"), value);
+        LOG_INFO(F("Setting ww circulation mode to %s"), value);
         write_command(0x02F5, 3, set, 0x02F5);
         return true;
     }
-    if (!Helpers::value2enum(value, set, FL_(enum_wwCircMode2))) {
-        LOG_WARNING(F("Set warm water circulation mode: Invalid mode"));
+    if (!Helpers::value2enum(value, set, FL_(enum_wwMode2))) {
+        LOG_WARNING(F("Set ww circulation mode: Invalid mode"));
         return false;
     }
-    LOG_INFO(F("Setting warm water circulation mode to %s"), value);
+    LOG_INFO(F("Setting ww circulation mode to %s"), value);
     write_command(EMS_TYPE_wwSettings, 3, set, EMS_TYPE_wwSettings);
     return true;
 }
@@ -1439,20 +1451,20 @@ bool Thermostat::set_wwcircmode(const char * value, const int8_t id) {
 bool Thermostat::set_wwDisinfect(const char * value, const int8_t id) {
     bool b = false;
     if (!Helpers::value2bool(value, b)) {
-        LOG_WARNING(F("Set warm water disinfect: Invalid value"));
+        LOG_WARNING(F("Set ww disinfect: Invalid value"));
         return false;
     }
-    LOG_INFO(F("Setting warm water disinfect to %s"), b ? F_(on) : F_(off));
+    LOG_INFO(F("Setting ww disinfect to %s"), b ? F_(on) : F_(off));
     write_command(0x37, 4, b ? 0xFF : 0x00, 0x37);
     return true;
 }
 bool Thermostat::set_wwDisinfectDay(const char * value, const int8_t id) {
     uint8_t set = 0xFF;
     if (!Helpers::value2enum(value, set, FL_(enum_dayOfWeek))) {
-        LOG_WARNING(F("Set warm water disinfection day: Invalid day"));
+        LOG_WARNING(F("Set ww disinfection day: Invalid day"));
         return false;
     }
-    LOG_INFO(F("Setting warm water disinfection day to %s"), value);
+    LOG_INFO(F("Setting ww disinfection day to %s"), value);
     write_command(0x37, 5, set, 0x37);
     return true;
 }
@@ -1460,14 +1472,14 @@ bool Thermostat::set_wwDisinfectDay(const char * value, const int8_t id) {
 bool Thermostat::set_wwDisinfectHour(const char * value, const int8_t id) {
     int set;
     if (!Helpers::value2number(value, set)) {
-        LOG_WARNING(F("Set warm water disinfection hour: Invalid"));
+        LOG_WARNING(F("Set ww disinfection hour: Invalid"));
         return false;
     }
     if (set < 0 || set > 23) {
-        LOG_WARNING(F("Set warm water disinfection hour: Invalid"));
+        LOG_WARNING(F("Set ww disinfection hour: Invalid"));
         return false;
     }
-    LOG_INFO(F("Setting warm water disinfection hour to %s"), value);
+    LOG_INFO(F("Setting ww disinfection hour to %s"), value);
     write_command(0x37, 6, set, 0x37);
     return true;
 }
@@ -1475,14 +1487,14 @@ bool Thermostat::set_wwDisinfectHour(const char * value, const int8_t id) {
 bool Thermostat::set_wwMaxTemp(const char * value, const int8_t id) {
     int t = 0;
     if (!Helpers::value2number(value, t)) {
-        LOG_WARNING(F("Set warm water max temperature: Invalid value"));
+        LOG_WARNING(F("Set ww max temperature: Invalid value"));
         return false;
     }
     if (t < 0 || t > 90) {
-        LOG_WARNING(F("Set warm water max temperature: Invalid value"));
+        LOG_WARNING(F("Set ww max temperature: Invalid value"));
         return false;
     }
-    LOG_INFO(F("Setting warm water max temperature to %d C"), t);
+    LOG_INFO(F("Setting ww max temperature to %d C"), t);
     write_command(0x37, 8, t, 0x37);
     return true;
 }
@@ -1490,10 +1502,10 @@ bool Thermostat::set_wwMaxTemp(const char * value, const int8_t id) {
 bool Thermostat::set_wwOneTimeKey(const char * value, const int8_t id) {
     bool b = false;
     if (!Helpers::value2bool(value, b)) {
-        LOG_WARNING(F("Set warm water loading one time key: Invalid value"));
+        LOG_WARNING(F("Set ww loading one time key: Invalid value"));
         return false;
     }
-    LOG_INFO(F("Setting warm water loading one time key to %s"), value);
+    LOG_INFO(F("Setting ww loading one time key to %s"), value);
     write_command(0x37, 9, b ? 0xFF : 0x00, 0x37);
     return true;
 }
@@ -1501,10 +1513,10 @@ bool Thermostat::set_wwOneTimeKey(const char * value, const int8_t id) {
 bool Thermostat::set_wwProgMode(const char * value, const int8_t id) {
     uint8_t set = 0xFF;
     if (!Helpers::value2enum(value, set, FL_(enum_wwProgMode))) {
-        LOG_WARNING(F("Set warm water program mode: Invalid mode"));
+        LOG_WARNING(F("Set ww program mode: Invalid mode"));
         return false;
     }
-    LOG_INFO(F("Setting warm water program mode to %s"), value);
+    LOG_INFO(F("Setting ww program mode to %s"), value);
     write_command(0x37, 0, set ? 0xFF : 0x00, 0x37);
     return true;
 }
@@ -1512,10 +1524,10 @@ bool Thermostat::set_wwProgMode(const char * value, const int8_t id) {
 bool Thermostat::set_wwCircProg(const char * value, const int8_t id) {
     uint8_t set = 0xFF;
     if (!Helpers::value2enum(value, set, FL_(enum_wwProgMode))) {
-        LOG_WARNING(F("Set warm water circulation program mode: Invalid mode"));
+        LOG_WARNING(F("Set ww circulation program mode: Invalid mode"));
         return false;
     }
-    LOG_INFO(F("Setting warm water circulation program mode to %s"), value);
+    LOG_INFO(F("Setting ww circulation program mode to %s"), value);
     write_command(0x37, 1, set ? 0xFF : 0x00, 0x37);
     return true;
 }
@@ -1994,19 +2006,30 @@ bool Thermostat::set_program(const char * value, const int8_t id) {
         return false;
     }
 
-    int set = 0xFF;
-    if (!Helpers::value2number(value, set)) {
-        LOG_WARNING(F("Setting program: Invalid number"));
-        return false;
+    uint8_t set = 0xFF;
+    if (model() == EMS_DEVICE_FLAG_RC20_N) {
+        if (Helpers::value2enum(value, set, FL_(enum_progMode3))) {
+            write_command(set_typeids[hc->hc_num() - 1], 11, set + 1, set_typeids[hc->hc_num() - 1]);
+        }
+    } else if (model() == EMS_DEVICE_FLAG_RC35 || model() == EMS_DEVICE_FLAG_RC30_N) {
+        if (Helpers::value2enum(value, set, FL_(enum_progMode2))) {
+            write_command(timer_typeids[hc->hc_num() - 1], 84, set, timer_typeids[hc->hc_num() - 1]);
+        }
+    } else if (model() == EMS_DEVICE_FLAG_RC300 || model() == EMS_DEVICE_FLAG_RC100) {
+        if (Helpers::value2enum(value, set, FL_(enum_progMode))) {
+            write_command(set_typeids[hc->hc_num() - 1], 11, set + 1, set_typeids[hc->hc_num() - 1]);
+        }
+    } else if (model() == EMS_DEVICE_FLAG_JUNKERS) {
+        if (Helpers::value2enum(value, set, FL_(enum_progMode4))) {
+            if (has_flags(EMS_DEVICE_FLAG_JUNKERS_OLD)) {
+                write_command(set_typeids[hc->hc_num() - 1], 10, set + 1, set_typeids[hc->hc_num() - 1]);
+            } else {
+                write_command(set_typeids[hc->hc_num() - 1], 13, set + 1, set_typeids[hc->hc_num() - 1]);
+            }
+        }
     }
 
-    if (model() == EMS_DEVICE_FLAG_RC20_N && set > 0 && set < 10) {
-        write_command(set_typeids[hc->hc_num() - 1], 11, set, set_typeids[hc->hc_num() - 1]);
-    } else if ((model() == EMS_DEVICE_FLAG_RC35 || model() == EMS_DEVICE_FLAG_RC30_N) && set < 11) {
-        write_command(timer_typeids[hc->hc_num() - 1], 84, set, timer_typeids[hc->hc_num() - 1]);
-    } else if ((model() == EMS_DEVICE_FLAG_RC300 || model() == EMS_DEVICE_FLAG_RC100) && (set == 1 || set == 2)) {
-        write_command(set_typeids[hc->hc_num() - 1], 11, set, set_typeids[hc->hc_num() - 1]);
-    } else {
+    if (set == 0xFF) {
         LOG_WARNING(F("Setting program: Invalid number"));
         return false;
     }
@@ -2468,7 +2491,31 @@ void Thermostat::register_device_values() {
                               MAKE_CF_CB(set_building));
         register_device_value(TAG_DEVICE_DATA_WW, &wwMode_, DeviceValueType::ENUM, FL_(enum_wwMode2), FL_(wwMode), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwmode));
         register_device_value(
-            TAG_DEVICE_DATA_WW, &wwCircMode_, DeviceValueType::ENUM, FL_(enum_wwCircMode2), FL_(wwCircMode), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwcircmode));
+            TAG_DEVICE_DATA_WW, &wwCircMode_, DeviceValueType::ENUM, FL_(enum_wwMode2), FL_(wwCircMode), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwcircmode));
+        register_device_value(
+            TAG_DEVICE_DATA_WW, &wwProgMode_, DeviceValueType::ENUM, FL_(enum_wwProgMode), FL_(wwProgMode), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwProgMode));
+        register_device_value(
+            TAG_DEVICE_DATA_WW, &wwCircProg_, DeviceValueType::ENUM, FL_(enum_wwProgMode), FL_(wwCircProg), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwCircProg));
+        register_device_value(TAG_DEVICE_DATA_WW, &wwDisinfect_, DeviceValueType::BOOL, nullptr, FL_(wwDisinfect), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwDisinfect));
+        register_device_value(TAG_DEVICE_DATA_WW,
+                              &wwDisinfectDay_,
+                              DeviceValueType::ENUM,
+                              FL_(enum_dayOfWeek),
+                              FL_(wwDisinfectDay),
+                              DeviceValueUOM::NONE,
+                              MAKE_CF_CB(set_wwDisinfectDay));
+        register_device_value(TAG_DEVICE_DATA_WW,
+                              &wwDisinfectHour_,
+                              DeviceValueType::UINT,
+                              nullptr,
+                              FL_(wwDisinfectHour),
+                              DeviceValueUOM::OCLOCK,
+                              MAKE_CF_CB(set_wwDisinfectHour),
+                              0,
+                              23);
+        register_device_value(TAG_DEVICE_DATA_WW, &wwMaxTemp_, DeviceValueType::UINT, nullptr, FL_(wwMaxTemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_wwMaxTemp));
+        register_device_value(
+            TAG_DEVICE_DATA_WW, &wwOneTimeKey_, DeviceValueType::BOOL, nullptr, FL_(wwOneTimeKey), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwOneTimeKey));
         break;
     case EMS_DEVICE_FLAG_RC35:
         register_device_value(TAG_THERMOSTAT_DATA, &dateTime_, DeviceValueType::STRING, nullptr, FL_(dateTime), DeviceValueUOM::NONE, MAKE_CF_CB(set_datetime));
@@ -2499,7 +2546,7 @@ void Thermostat::register_device_values() {
                               MAKE_CF_CB(set_building));
         register_device_value(TAG_DEVICE_DATA_WW, &wwMode_, DeviceValueType::ENUM, FL_(enum_wwMode2), FL_(wwMode), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwmode));
         register_device_value(
-            TAG_DEVICE_DATA_WW, &wwCircMode_, DeviceValueType::ENUM, FL_(enum_wwCircMode2), FL_(wwCircMode), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwcircmode));
+            TAG_DEVICE_DATA_WW, &wwCircMode_, DeviceValueType::ENUM, FL_(enum_wwMode2), FL_(wwCircMode), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwcircmode));
         register_device_value(
             TAG_DEVICE_DATA_WW, &wwProgMode_, DeviceValueType::ENUM, FL_(enum_wwProgMode), FL_(wwProgMode), DeviceValueUOM::NONE, MAKE_CF_CB(set_wwProgMode));
         register_device_value(
@@ -2517,7 +2564,7 @@ void Thermostat::register_device_values() {
                               DeviceValueType::UINT,
                               nullptr,
                               FL_(wwDisinfectHour),
-                              DeviceValueUOM::NONE,
+                              DeviceValueUOM::OCLOCK,
                               MAKE_CF_CB(set_wwDisinfectHour),
                               0,
                               23);
@@ -2615,6 +2662,7 @@ void Thermostat::register_device_values_hc(std::shared_ptr<Thermostat::HeatingCi
         register_device_value(tag, &hc->minflowtemp, DeviceValueType::UINT, nullptr, FL_(minflowtemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_minflowtemp));
         register_device_value(tag, &hc->maxflowtemp, DeviceValueType::UINT, nullptr, FL_(maxflowtemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_maxflowtemp));
         register_device_value(tag, &hc->roominfluence, DeviceValueType::UINT, nullptr, FL_(roominfluence), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_roominfluence));
+        register_device_value(tag, &hc->curroominfl, DeviceValueType::SHORT, FL_(div10), FL_(curroominfl), DeviceValueUOM::DEGREES);
         register_device_value(tag, &hc->nofrosttemp, DeviceValueType::INT, nullptr, FL_(nofrosttemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_nofrosttemp));
         register_device_value(tag, &hc->targetflowtemp, DeviceValueType::UINT, nullptr, FL_(targetflowtemp), DeviceValueUOM::DEGREES);
         register_device_value(tag, &hc->heatingtype, DeviceValueType::ENUM, FL_(enum_heatingtype), FL_(heatingtype), DeviceValueUOM::NONE);
@@ -2623,7 +2671,7 @@ void Thermostat::register_device_values_hc(std::shared_ptr<Thermostat::HeatingCi
         register_device_value(tag, &hc->summermode, DeviceValueType::BOOL, nullptr, FL_(summermode), DeviceValueUOM::NONE);
         register_device_value(
             tag, &hc->controlmode, DeviceValueType::ENUM, FL_(enum_controlmode), FL_(controlmode), DeviceValueUOM::NONE, MAKE_CF_CB(set_controlmode));
-        register_device_value(tag, &hc->program, DeviceValueType::UINT, nullptr, FL_(program), DeviceValueUOM::NONE, MAKE_CF_CB(set_program));
+        register_device_value(tag, &hc->program, DeviceValueType::ENUM, FL_(enum_progMode), FL_(program), DeviceValueUOM::NONE, MAKE_CF_CB(set_program));
         register_device_value(tag, &hc->tempautotemp, DeviceValueType::UINT, FL_(div2), FL_(tempautotemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_tempautotemp));
         register_device_value(tag, &hc->fastHeatup, DeviceValueType::UINT, nullptr, FL_(fastheatup), DeviceValueUOM::PERCENT, MAKE_CF_CB(set_fastheatup));
         break;
@@ -2640,7 +2688,7 @@ void Thermostat::register_device_values_hc(std::shared_ptr<Thermostat::HeatingCi
         register_device_value(tag, &hc->modetype, DeviceValueType::ENUM, FL_(enum_modetype2), FL_(modetype), DeviceValueUOM::NONE);
         register_device_value(tag, &hc->daytemp, DeviceValueType::UINT, FL_(div2), FL_(daytemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_daytemp));
         register_device_value(tag, &hc->nighttemp, DeviceValueType::UINT, FL_(div2), FL_(nighttemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_nighttemp));
-        register_device_value(tag, &hc->program, DeviceValueType::UINT, nullptr, FL_(program), DeviceValueUOM::NONE, MAKE_CF_CB(set_program));
+        register_device_value(tag, &hc->program, DeviceValueType::ENUM, FL_(enum_progMode3), FL_(program), DeviceValueUOM::NONE, MAKE_CF_CB(set_program));
         // RC25 additions, guess, not validated by users, see:https://github.com/emsesp/EMS-ESP32/issues/106
         register_device_value(tag, &hc->minflowtemp, DeviceValueType::UINT, nullptr, FL_(minflowtemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_minflowtemp));
         register_device_value(tag, &hc->maxflowtemp, DeviceValueType::UINT, nullptr, FL_(maxflowtemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_maxflowtemp));
@@ -2674,7 +2722,7 @@ void Thermostat::register_device_values_hc(std::shared_ptr<Thermostat::HeatingCi
         register_device_value(
             tag, &hc->controlmode, DeviceValueType::ENUM, FL_(enum_controlmode2), FL_(controlmode), DeviceValueUOM::NONE, MAKE_CF_CB(set_controlmode));
         register_device_value(tag, &hc->control, DeviceValueType::ENUM, FL_(enum_control), FL_(control), DeviceValueUOM::NONE, MAKE_CF_CB(set_control));
-        register_device_value(tag, &hc->program, DeviceValueType::UINT, nullptr, FL_(program), DeviceValueUOM::NONE, MAKE_CF_CB(set_program));
+        register_device_value(tag, &hc->program, DeviceValueType::ENUM, FL_(enum_progMode2), FL_(program), DeviceValueUOM::NONE, MAKE_CF_CB(set_program));
         register_device_value(tag, &hc->pause, DeviceValueType::UINT, nullptr, FL_(pause), DeviceValueUOM::HOURS, MAKE_CF_CB(set_pause));
         register_device_value(tag, &hc->party, DeviceValueType::UINT, nullptr, FL_(party), DeviceValueUOM::HOURS, MAKE_CF_CB(set_party));
         register_device_value(tag, &hc->tempautotemp, DeviceValueType::UINT, FL_(div2), FL_(tempautotemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_tempautotemp));
@@ -2689,6 +2737,8 @@ void Thermostat::register_device_values_hc(std::shared_ptr<Thermostat::HeatingCi
         register_device_value(tag, &hc->daytemp, DeviceValueType::UINT, FL_(div2), FL_(heattemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_heattemp));
         register_device_value(tag, &hc->nighttemp, DeviceValueType::UINT, FL_(div2), FL_(ecotemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_ecotemp));
         register_device_value(tag, &hc->nofrosttemp, DeviceValueType::INT, FL_(div2), FL_(nofrosttemp), DeviceValueUOM::DEGREES, MAKE_CF_CB(set_nofrosttemp));
+        register_device_value(tag, &hc->control, DeviceValueType::ENUM, FL_(enum_j_control), FL_(control), DeviceValueUOM::NONE, MAKE_CF_CB(set_control));
+        register_device_value(tag, &hc->program, DeviceValueType::ENUM, FL_(enum_progMode4), FL_(program), DeviceValueUOM::NONE, MAKE_CF_CB(set_program));
         break;
     }
 }
