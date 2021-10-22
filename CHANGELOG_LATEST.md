@@ -15,6 +15,7 @@
 - Added Home Assistant device_class to sensor entities
 - Added another Buderus RC10 thermostat with Product ID 65 [#160](https://github.com/emsesp/EMS-ESP32/issues/160)
 - Added support for mDNS [#161](https://github.com/emsesp/EMS-ESP32/issues/161)
+- Added last system ESP32 reset code to log (and `system info` output)
 
 ## Fixed
 
@@ -22,6 +23,7 @@
 - Manually Controlling Solar Circuit [#107](https://github.com/emsesp/EMS-ESP32/issues/107)
 - Fix thermostat commands not defaulting to the master thermostat [#110](https://github.com/emsesp/EMS-ESP32/issues/110)
 - Enlarge parse-buffer for long names like `cylinderpumpmodulation`
+- MQTT not subscribing to all device entities [#166](https://github.com/emsesp/EMS-ESP32/issues/166)
 
 ## Changed
 

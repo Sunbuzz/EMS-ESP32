@@ -127,7 +127,7 @@ class Mqtt {
                                   const __FlashStringHelper * entity,
                                   const uint8_t               uom,
                                   const bool                  has_cmd = false);
-    static void register_command(const uint8_t device_type, const __FlashStringHelper * cmd, cmdfunction_p cb, uint8_t flags = 0);
+    static void sub_command(const uint8_t device_type, const __FlashStringHelper * cmd, cmdfunction_p cb, uint8_t flags = 0);
 
     static void show_topic_handlers(uuid::console::Shell & shell, const uint8_t device_type);
     static void show_mqtt(uuid::console::Shell & shell);
@@ -178,12 +178,20 @@ class Mqtt {
         return ha_climate_format_;
     }
 
+    // nested_format is 1 if nested, otherwise 2 for single topics
     static uint8_t nested_format() {
-        return nested_format_; // nested_format is 1 if nested, otherwise 2 for single topics
+        return nested_format_;
+    }
+    static void nested_format(uint8_t nested_format) {
+        nested_format_ = nested_format;
     }
 
-    static void nested_format(uint8_t nested_format) {
-        nested_format_ = nested_format; // nested_format is 1 if nested, otherwise 2 for single topics
+    // subscribe_format is 0 for General topics, 1 for individual with main heating circuit or 2 for individual topics with all heating circuits
+    static uint8_t subscribe_format() {
+        return subscribe_format_;
+    }
+    static void subscribe_format(uint8_t subscribe_format) {
+        subscribe_format_ = subscribe_format;
     }
 
     static bool ha_enabled() {

@@ -22,8 +22,9 @@
 #include "test/test.h"
 #endif
 
+#ifndef EMSESP_STANDALONE
 #ifdef ESP_IDF_VERSION_MAJOR // IDF 4+
-#if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
+#if CONFIG_IDF_TARGET_ESP32  // ESP32/PICO-D4
 #include "../esp32/rom/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32S2
 #include "../esp32s2/rom/rtc.h"
@@ -34,6 +35,7 @@
 #endif
 #else // ESP32 Before IDF 4.0
 #include "../rom/rtc.h"
+#endif
 #endif
 
 namespace emsesp {
@@ -229,6 +231,10 @@ void System::syslog_start() {
         syslog_.mark_interval(syslog_mark_interval_);
         syslog_.destination(syslog_host_.c_str(), syslog_port_);
         syslog_.hostname(hostname().c_str());
+
+        // register the command
+        Command::add(EMSdevice::DeviceType::SYSTEM, F_(syslog_level), System::command_syslog_level, F("change syslog level"), CommandFlag::ADMIN_ONLY);
+
     } else if (was_enabled) {
         // in case service is still running, this flushes the queue
         // https://github.com/emsesp/EMS-ESP/issues/496
@@ -289,7 +295,9 @@ void System::wifi_tweak() {
     bool         s1 = WiFi.getSleep();
     WiFi.setSleep(false); // turn off sleep - WIFI_PS_NONE
     bool s2 = WiFi.getSleep();
+#if defined(EMSESP_DEBUG)
     LOG_DEBUG(F("[DEBUG] Adjusting WiFi - Tx power %d->%d, Sleep %d->%d"), p1, p2, s1, s2);
+#endif
 #endif
 }
 
@@ -699,19 +707,25 @@ void System::system_check() {
 // these commands respond to the topic "system" and take a payload like {cmd:"", data:"", id:""}
 // no individual subscribe for pin command because id is needed
 void System::commands_init() {
-    Command::add(EMSdevice::DeviceType::SYSTEM, F_(pin), System::command_pin, F("set GPIO"), CommandFlag::MQTT_SUB_FLAG_NOSUB | CommandFlag::ADMIN_ONLY);
+    Command::add(EMSdevice::DeviceType::SYSTEM,
+                 F_(pin),
+                 System::command_pin,
+                 F("set GPIO"),
+                 CommandFlag::MQTT_SUB_FLAG_NOSUB | CommandFlag::ADMIN_ONLY); // dont create a MQTT topic for this
+
     Command::add(EMSdevice::DeviceType::SYSTEM, F_(send), System::command_send, F("send a telegram"), CommandFlag::ADMIN_ONLY);
-    Command::add(EMSdevice::DeviceType::SYSTEM, F_(publish), System::command_publish, F("force a MQTT publish"), CommandFlag::ADMIN_ONLY);
     Command::add(EMSdevice::DeviceType::SYSTEM, F_(fetch), System::command_fetch, F("refresh all EMS values"), CommandFlag::ADMIN_ONLY);
     Command::add(EMSdevice::DeviceType::SYSTEM, F_(restart), System::command_restart, F("restarts EMS-ESP"), CommandFlag::ADMIN_ONLY);
+    Command::add(EMSdevice::DeviceType::SYSTEM, F_(watch), System::command_watch, F("watch incoming telegrams"), CommandFlag::ADMIN_ONLY);
+
+    // these commands will return data in JSON format
     Command::add_json(EMSdevice::DeviceType::SYSTEM, F_(info), System::command_info, F("system status"));
     Command::add_json(EMSdevice::DeviceType::SYSTEM, F_(settings), System::command_settings, F("list system settings"));
     Command::add_json(EMSdevice::DeviceType::SYSTEM, F_(commands), System::command_commands, F("list system commands"));
+
 #if defined(EMSESP_DEBUG)
     Command::add(EMSdevice::DeviceType::SYSTEM, F("test"), System::command_test, F("run tests"));
 #endif
-    Command::add(EMSdevice::DeviceType::SYSTEM, F_(watch), System::command_watch, F("watch incoming telegrams"), CommandFlag::ADMIN_ONLY);
-    Command::add(EMSdevice::DeviceType::SYSTEM, F_(syslog_level), System::command_syslog_level, F("set syslog level"), CommandFlag::ADMIN_ONLY);
 }
 
 // flashes the LED
@@ -986,7 +1000,7 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
 #ifndef EMSESP_STANDALONE
     node["freemem"] = ESP.getFreeHeap() / 1000L; // kilobytes
 #endif
-    node["reset_reason"] = EMSESP::system_.reset_reason(0) + " / " +  EMSESP::system_.reset_reason(1);
+    node["reset_reason"] = EMSESP::system_.reset_reason(0) + " / " + EMSESP::system_.reset_reason(1);
 
     node = json.createNestedObject("Status");
 
@@ -1092,25 +1106,43 @@ bool System::command_restart(const char * value, const int8_t id) {
 }
 
 const std::string System::reset_reason(uint8_t cpu) {
+#ifndef EMSESP_STANDALONE
     switch (rtc_get_reset_reason(cpu)) {
-    case 1:  return ("Power on reset");
+    case 1:
+        return ("Power on reset");
     // case 2 :reset pin not on esp32
-    case 3:  return ("Software reset");
-    case 4:  return ("Legacy watch dog reset");
-    case 5:  return ("Deep sleep reset");
-    case 6:  return ("Reset by SDIO");
-    case 7:  return ("Timer group0 watch dog reset");
-    case 8:  return ("Timer group1 watch dog reset");
-    case 9:  return ("RTC watch dog reset");
-    case 10: return ("Intrusion reset CPU");
-    case 11: return ("Timer group reset CPU");
-    case 12: return ("Software reset CPU");
-    case 13: return ("RTC watch dog reset: CPU");
-    case 14: return ("APP CPU reseted by PRO CPU");
-    case 15: return ("Brownout reset");
-    case 16: return ("RTC watch dog reset: CPU+RTC");
-    default: break;
+    case 3:
+        return ("Software reset");
+    case 4:
+        return ("Legacy watch dog reset");
+    case 5:
+        return ("Deep sleep reset");
+    case 6:
+        return ("Reset by SDIO");
+    case 7:
+        return ("Timer group0 watch dog reset");
+    case 8:
+        return ("Timer group1 watch dog reset");
+    case 9:
+        return ("RTC watch dog reset");
+    case 10:
+        return ("Intrusion reset CPU");
+    case 11:
+        return ("Timer group reset CPU");
+    case 12:
+        return ("Software reset CPU");
+    case 13:
+        return ("RTC watch dog reset: CPU");
+    case 14:
+        return ("APP CPU reseted by PRO CPU");
+    case 15:
+        return ("Brownout reset");
+    case 16:
+        return ("RTC watch dog reset: CPU+RTC");
+    default:
+        break;
     }
+#endif
     return ("Unkonwn");
 }
 
