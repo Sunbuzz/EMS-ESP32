@@ -114,15 +114,15 @@ class EMSESPSettingsForm extends Component<EMSESPSettingsFormProps> {
         <Box bgcolor="info.main" p={2} mt={2} mb={2}>
           <Typography variant="body1">
             <i>
-              Refer to the
+              visit the&nbsp;
               <Link
                 target="_blank"
                 href="https://emsesp.github.io/docs/#/Configure-firmware?id=ems-esp-settings"
                 color="primary"
               >
-                {' documentation'}
+                {'online documentation'}
               </Link>
-              &nbsp;for information on each setting
+              &nbsp;for details explaining each setting
             </i>
           </Typography>
         </Box>
@@ -136,7 +136,7 @@ class EMSESPSettingsForm extends Component<EMSESPSettingsFormProps> {
           container
           spacing={1}
           direction="row"
-          justify="flex-start"
+          justifyContent="flex-start"
           alignItems="flex-start"
         >
           <Grid item xs={5}>
@@ -209,7 +209,7 @@ class EMSESPSettingsForm extends Component<EMSESPSettingsFormProps> {
             container
             spacing={1}
             direction="row"
-            justify="flex-start"
+            justifyContent="flex-start"
             alignItems="flex-start"
           >
             <Grid item xs={4}>
@@ -486,7 +486,7 @@ class EMSESPSettingsForm extends Component<EMSESPSettingsFormProps> {
           container
           spacing={0}
           direction="row"
-          justify="flex-start"
+          justifyContent="flex-start"
           alignItems="flex-start"
         >
           <BlockFormControlLabel
@@ -520,7 +520,7 @@ class EMSESPSettingsForm extends Component<EMSESPSettingsFormProps> {
           container
           spacing={1}
           direction="row"
-          justify="flex-start"
+          justifyContent="flex-start"
           alignItems="flex-start"
         >
           <Grid item xs={4}>
@@ -591,7 +591,7 @@ class EMSESPSettingsForm extends Component<EMSESPSettingsFormProps> {
             container
             spacing={1}
             direction="row"
-            justify="flex-start"
+            justifyContent="flex-start"
             alignItems="flex-start"
           >
             <Grid item xs={5}>
